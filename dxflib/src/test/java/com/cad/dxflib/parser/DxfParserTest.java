@@ -13,6 +13,7 @@ import com.cad.dxflib.entities.DxfText;
 import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.structure.DxfLayer;
+import com.cad.dxflib.structure.DxfLinetype; // Added import
 import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.util.List;
@@ -337,5 +338,49 @@ class DxfParserTest {
         assertEquals(new Point3D(100.0, 100.0, 0.0), insertCircle.getInsertionPoint());
         assertEquals(2.0, insertCircle.getXScale(), 0.001);
         assertEquals(2.0, insertCircle.getYScale(), 0.001);
+    }
+
+    @Test
+    void testParseLinetypesSimple() throws DxfParserException {
+        DxfParser parser = new DxfParser();
+        InputStream inputStream = getResourceAsStream("/dxf/linetypes_simple.dxf");
+        DxfDocument doc = parser.parse(inputStream);
+
+        assertNotNull(doc);
+        assertNotNull(doc.getLinetypes());
+        // Expects "CONTINUOUS" (added by default), "DASHDOT", "DOTTED", "BYLAYER", "BYBLOCK"
+        assertEquals(5, doc.getLinetypes().size(), "Should parse defined linetypes plus the default CONTINUOUS.");
+
+        DxfLinetype continuous = doc.getLinetype("CONTINUOUS");
+        assertNotNull(continuous);
+        assertTrue(continuous.isContinuous());
+
+        DxfLinetype dashdot = doc.getLinetype("DASHDOT");
+        assertNotNull(dashdot);
+        assertEquals("Dash dot __ . __ . __ . __ . __ . __", dashdot.getDescription());
+        assertEquals(1.0, dashdot.getPatternLength(), 0.001);
+        assertEquals(4, dashdot.getPatternElements().size());
+        assertEquals(0.5, dashdot.getPatternElements().get(0), 0.001);   // Dash
+        assertEquals(-0.25, dashdot.getPatternElements().get(1), 0.001); // Space
+        assertEquals(0.0, dashdot.getPatternElements().get(2), 0.001);   // Dot
+        assertEquals(-0.25, dashdot.getPatternElements().get(3), 0.001); // Space
+        assertFalse(dashdot.isContinuous());
+
+        DxfLinetype dotted = doc.getLinetype("DOTTED");
+        assertNotNull(dotted);
+        assertEquals("Dotted . . . . . . . . . . . . . . . . . .", dotted.getDescription());
+        assertEquals(0.2, dotted.getPatternLength(), 0.001);
+        assertEquals(2, dotted.getPatternElements().size());
+        assertEquals(0.0, dotted.getPatternElements().get(0), 0.001);    // Dot
+        assertEquals(-0.2, dotted.getPatternElements().get(1), 0.001);   // Space
+        assertFalse(dotted.isContinuous());
+
+        DxfLinetype bylayer = doc.getLinetype("BYLAYER");
+        assertNotNull(bylayer);
+        assertTrue(bylayer.getPatternElements().isEmpty());
+
+        DxfLinetype byblock = doc.getLinetype("BYBLOCK");
+        assertNotNull(byblock);
+        assertTrue(byblock.getPatternElements().isEmpty());
     }
 }

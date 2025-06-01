@@ -54,8 +54,8 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Implementação das Estruturas de Dados Base (DxfDocument, DxfEntity, Point2D/3D, etc.)
 - [X] Implementação do Parser para Entidades DXF Iniciais (LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, INSERT)
 - [X] Adição de Testes Unitários para Entidades Iniciais
-- [X] Implementação da Leitura de Tabelas (LAYER) e Seção de Blocos (BLOCK)
-- [X] Adição de Testes Unitários para Layers e Blocos
+- [X] Implementação da Leitura de Seções (TABLES (LAYER, LTYPE), BLOCKS)
+- [X] Adição de Testes Unitários para Tabelas (LAYER, LTYPE) e Blocos
 - [~] Implementação do Conversor DXF para SVG (para entidades parseadas)
 - [~] Adição de Testes Unitários para o Conversor SVG
 
