@@ -6,6 +6,7 @@
     <groupId>com.cad.tool</groupId>
     <artifactId>cad-tool</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
   <groupId>com.cad.modules.physics</groupId>
   <artifactId>physics</artifactId>

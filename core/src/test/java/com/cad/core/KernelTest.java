@@ -1,44 +1,26 @@
 package com.cad.core;
 
 import com.cad.core.kernel.Kernel;
-
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
     /**
      * Unit test for Kernel class.
      */
-public class KernelTest extends TestCase {
+public class KernelTest {
         private Kernel kernel;
 
-        /**
-         * Create the test case
-         *
-         * @param testName name of the test case
-         */
-        public KernelTest(String testName) {
-            super(testName);
-        }
-
-        /**
-         * @return the suite of tests being tested
-         */
-        public static Test suite() {
-            return new TestSuite(KernelTest.class);
-        }
-
-        @Override
-        protected void setUp() throws Exception {
-            super.setUp();
+        @BeforeEach
+        void setUp() {
             kernel = new Kernel();
         }
 
         /**
          * Test for manageResources method
      */
-        public void testManageResources() {
+        @Test
+        void testManageResources() {
             kernel.manageResources();
             // Add assertions or verifications if needed
             assertTrue(true);
@@ -47,7 +29,8 @@ public class KernelTest extends TestCase {
         /**
          * Test for handleEvent method
          */
-        public void testHandleEvent() {
+        @Test
+        void testHandleEvent() {
             kernel.handleEvent();
             // Add assertions or verifications if needed
             assertTrue(true);
@@ -56,7 +39,8 @@ public class KernelTest extends TestCase {
         /**
          * Test for loadConfiguration method
          */
-        public void testLoadConfiguration() {
+        @Test
+        void testLoadConfiguration() {
             kernel.loadConfiguration();
             // Add assertions or verifications if needed
             assertTrue(true);
@@ -65,7 +49,8 @@ public class KernelTest extends TestCase {
         /**
          * Test for loadPlugins method
          */
-        public void testLoadPlugins() {
+        @Test
+        void testLoadPlugins() {
             kernel.loadPlugins();
             // Add assertions or verifications if needed
             assertTrue(true);
@@ -74,7 +59,8 @@ public class KernelTest extends TestCase {
         /**
          * Test for initialize method
          */
-        public void testInitialize() {
+        @Test
+        void testInitialize() {
             kernel.initialize();
             // Add assertions or verifications if needed
             assertTrue(true);
@@ -83,7 +69,8 @@ public class KernelTest extends TestCase {
         /**
          * Test for renderGraphics method
          */
-        public void testLoadModules() {
+        @Test
+        void testLoadModules() {
             kernel.loadModules();
             // Add assertions or verifications if needed
             assertTrue(true);
