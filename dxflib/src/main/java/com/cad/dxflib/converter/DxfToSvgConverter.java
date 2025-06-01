@@ -4,6 +4,7 @@ import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.math.Bounds;
 import com.cad.dxflib.common.DxfEntity;
 import com.cad.dxflib.common.Point2D; // For LwPolyline
+import com.cad.dxflib.common.Point3D; // Added for Point3D
 import com.cad.dxflib.entities.DxfArc;
 import com.cad.dxflib.entities.DxfCircle;
 import com.cad.dxflib.entities.DxfLine;
