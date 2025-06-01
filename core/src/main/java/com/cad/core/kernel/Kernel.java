@@ -6,6 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+import javax.swing.SwingUtilities; // New import
+import com.cad.gui.MainFrame; // New import
+
 public class Kernel {
 
     ModuleManager moduleManager = new ModuleManager();
@@ -20,6 +23,12 @@ public class Kernel {
             loadPlugins();
             
             // Outras inicializações necessárias
+
+            // Launch the GUI
+            SwingUtilities.invokeLater(() -> {
+                MainFrame frame = new MainFrame();
+                frame.setVisible(true);
+            });
         }
         
 

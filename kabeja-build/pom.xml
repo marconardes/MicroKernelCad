@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                        http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.kabeja</groupId>
+    <artifactId>kabeja</artifactId>
+    <name>kabeja</name>
+    <version>0.5.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <description>Kabeja is a java library for parsing DXF and converting to SVG
+(dxf2svg). The library supports the SAX-api and can integrated
+into other applications (Cocoon,Batik). Tools for converting svg
+to jpeg, tiff, png and pdf are included.
+    </description>
+    <url>http://kabeja.sourceforge.net/</url>
+
+    <modules>
+        <module>core</module>
+    </modules>
+
+    <profiles>
+        <profile>
+            <id>blocks</id>
+            <modules>
+                <module>blocks/acis</module>
+                <module>blocks/dxf</module>
+                <module>blocks/ui</module>
+                <module>blocks/inkscape</module>
+                <module>blocks/svg</module>
+                <module>blocks/xslt</module>
+                <!-- module>blocks/cocoon</module -->
+            </modules>
+        </profile>
+    </profiles>
+
+    <issueManagement>
+        <system>Bugzilla</system>
+        <url>
+            http://sourceforge.net/tracker/?group_id=152775&amp;atid=785363
+        </url>
+    </issueManagement>
+
+    <inceptionYear>2005</inceptionYear>
+
+    <developers>
+        <developer>
+            <id>simijhag</id>
+            <name>Simon Mieth</name>
+            <email>simon.mieth@gmx.de</email>
+            <roles>
+                <role>Admin</role>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+        </developer>
+        <developer>
+            <id>michele</id>
+            <name>Michele Franzin</name>
+            <email>michele.franzin@gmail.com</email>
+            <roles>
+                <role>Developer</role>
+            </roles>
+            <timezone>+1</timezone>
+        </developer>
+    </developers>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+    </properties>
+
+    <licenses>
+        <license>
+            <name>Apache License V2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>manual</distribution>
+        </license>
+    </licenses>
+    <scm>
+        <connection>
+            scm:cvs:pserver:anonymous@${project.artifactId}.cvs.sourceforge.net:
+/cvsroot/${project.artifactId}:${project.artifactId}/
+        </connection>
+        <developerConnection>
+            scm:cvs:ext:developername@${project.artifactId}.cvs.sourceforge.net:
+/cvsroot/${project.artifactId}:${project.artifactId}/
+        </developerConnection>
+        <url>
+            http://${project.artifactId}.cvs.sourceforge.net/${project.artifactId}/${project.artifactId}/
+        </url>
+    </scm>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <verbose>true</verbose>
+                    <fork>true</fork>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                    <optimize>false</optimize>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.4.3</version> <!-- Consider updating this version too -->
+                <configuration>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.3.1</version> <!-- Consider updating this version too -->
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

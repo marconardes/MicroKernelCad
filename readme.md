@@ -1,54 +1,69 @@
-CAD Tool
+# Projeto de Ferramenta CAD Modular em Java
 
-Esta é uma ferramenta CAD modular, desenvolvida em Java, que utiliza uma arquitetura de microkernel para oferecer um ambiente flexível e extensível. O projeto é construído usando Maven e permite que novos módulos sejam adicionados como componentes independentes, permitindo uma expansão contínua das funcionalidades.
-Visão Geral
+## Visão Geral
 
-A ferramenta CAD é projetada com uma estrutura modular que segue o estilo de microkernel. O núcleo (core) fornece os serviços e a infraestrutura básica necessários, enquanto funcionalidades específicas, como geometria, renderização, física e exportação, são implementadas em módulos independentes. Isso facilita a manutenção, teste e ampliação do sistema, além de possibilitar o desenvolvimento paralelo de diferentes partes da aplicação.
-Estrutura do Projeto
+Este projeto é uma ferramenta CAD (Desenho Assistido por Computador) modular, desenvolvida em Java com o sistema de build Maven. Ele utiliza uma arquitetura de microkernel, onde um módulo central (`core`) gerencia os demais módulos e fornece serviços básicos. Esta arquitetura visa flexibilidade e extensibilidade, permitindo que novas funcionalidades sejam adicionadas como módulos independentes.
 
-bash
+O módulo `core` atua como o coração da aplicação, responsável pela inicialização do sistema, gerenciamento do ciclo de vida dos outros módulos, e facilitação da comunicação entre eles (potencialmente através de um sistema de barramento de eventos como o `EventBus` identificado). Crucialmente, o `core` também é responsável por iniciar a interface gráfica do usuário (GUI).
 
-cad-tool/
-├── pom.xml                    # Arquivo de configuração principal do Maven
-├── core/                      # Módulo central que atua como microkernel
-├── modules/                   # Módulos funcionais independentes
-│   ├── geometry/              # Módulo de operações geométricas
-│   ├── rendering/             # Módulo de renderização de modelos
-│   ├── physics/               # Módulo de simulação física
-│   └── export/                # Módulos para exportação (PDF, STL)
-├── plugins/                   # Plugins opcionais e de terceiros
-└── README.md                  # Documentação do projeto
+## Módulos Principais e Funcionalidades
 
-Principais Módulos
+A aplicação é composta pelos seguintes módulos principais:
 
-    Core: Fornece o microkernel e serviços centrais, como gerenciamento de módulos, configuração e comunicação.
-    Geometry: Implementa operações geométricas básicas e avançadas.
-    Rendering: Lida com a renderização visual dos modelos.
-    Physics: Realiza simulações físicas para análise de comportamento dos modelos.
-    Export: Permite exportar modelos em diferentes formatos, como PDF e STL.
+*   **`core` (Núcleo/Microkernel):**
+    *   Responsável pela inicialização da aplicação, incluindo a GUI.
+    *   Gerencia o ciclo de vida dos demais módulos (carregamento, inicialização, descarregamento).
+    *   Fornece serviços centrais como logging, configuração e um sistema de eventos (`EventBus`) para comunicação desacoplada entre módulos.
+*   **`gui` (Interface Gráfica do Usuário):**
+    *   Fornece a janela principal da aplicação e todos os elementos de interação com o usuário (menus, barras de ferramentas, área de desenho).
+    *   Implementado utilizando Java Swing.
+*   **`modules/geometry` (Geometria):**
+    *   Contém a lógica para a criação, manipulação e cálculos de formas geométricas 2D e 3D.
+    *   Define as entidades base do desenho (pontos, linhas, curvas, superfícies, sólidos).
+*   **`modules/rendering` (Renderização):**
+    *   Responsável pela visualização e renderização dos modelos CAD na área de desenho da GUI.
+    *   Traduz os dados geométricos em representações visuais.
+*   **`modules/physics` (Física):**
+    *   Provê capacidades de simulação física aplicadas aos modelos CAD, permitindo análises de stress, movimento, etc. (se aplicável ao escopo).
+*   **`modules/export` (Exportação):**
+    *   Agrupa submódulos que permitem exportar os projetos CAD para diversos formatos de arquivo padrão da indústria.
+    *   Atualmente, possui estrutura para exportação em PDF (`modules/export/pdf`) e STL (`modules/export/stl`).
+*   **`plugins` (Sistema de Plugins):**
+    *   Oferece uma arquitetura para estender as funcionalidades da ferramenta CAD através de plugins externos.
+    *   Inclui um exemplo (`plugins/custom_plugin`) demonstrando a integração.
 
-Como Executar
+## Como Compilar e Construir
 
-Para compilar e executar o projeto, certifique-se de ter o Java 21 e o Maven instalados.
+O projeto utiliza Maven como sistema de build. Para compilar todos os módulos e instalar os artefatos no repositório local, execute o seguinte comando na raiz do projeto:
 
-    Compile todos os módulos:
+```bash
+mvn clean install
+```
 
-    bash
+Isso garantirá que todos os módulos sejam compilados e que as dependências entre eles sejam resolvidas.
 
-    mvn clean install
+## Como Executar
 
-    Execute o núcleo (core) ou outros módulos individualmente conforme necessário.
+Para executar a aplicação com a interface gráfica, após compilar todos os módulos com `mvn clean install`, execute a classe principal do módulo `core`. O módulo `core` é responsável por inicializar o kernel e subsequentemente a interface gráfica.
 
-Contribuição
+Utilize o seguinte comando Maven:
 
-    Faça um fork do projeto.
-    Crie uma branch para a sua funcionalidade (git checkout -b feature/nova-funcionalidade).
-    Faça commit das suas alterações (git commit -m 'Adiciona nova funcionalidade').
-    Envie para a branch principal (git push origin feature/nova-funcionalidade).
-    Abra um Pull Request.
+```bash
+mvn exec:java -Dexec.mainClass="com.cad.core.kernel.Kernel" -pl core
+```
+Este comando instrui o Maven a executar o método `main` da classe `com.cad.core.kernel.Kernel` dentro do contexto do módulo `core`.
 
-Licença
+## Roadmap e Status do Projeto
 
-Este projeto está licenciado sob a licença MIT. Consulte o arquivo LICENSE para mais detalhes.
+Para um detalhamento do status atual de implementação das funcionalidades e o roadmap de desenvolvimento futuro, consulte o nosso [Roadmap do Projeto](ROADMAP.md).
 
-Esse README.md fornece uma visão geral do projeto, descrevendo a estrutura modular e os principais módulos, além de instruções de execução e contribuição.
+## Contribuindo
+
+Contribuições são bem-vindas! Se você deseja contribuir, por favor:
+1. Faça um fork do repositório.
+2. Crie uma nova branch para sua feature ou correção (`git checkout -b minha-feature`).
+3. Faça commit de suas mudanças (`git commit -am 'Adiciona nova feature'`).
+4. Faça push para a branch (`git push origin minha-feature`).
+5. Crie um novo Pull Request.
+
+Por favor, certifique-se de que seu código segue as convenções do projeto e inclua testes para novas funcionalidades.
