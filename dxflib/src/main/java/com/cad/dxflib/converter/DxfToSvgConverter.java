@@ -3,6 +3,7 @@ package com.cad.dxflib.converter;
 import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.math.Bounds;
 import com.cad.dxflib.common.DxfEntity;
+import com.cad.dxflib.common.EntityType; // Added import
 import com.cad.dxflib.common.Point2D; // For LwPolyline
 import com.cad.dxflib.common.Point3D; // Added for Point3D
 import com.cad.dxflib.entities.DxfArc;
@@ -184,7 +185,7 @@ public class DxfToSvgConverter {
 
         // Fill
         if (entity.getType() == EntityType.CIRCLE ||
-            (entity.getType() == EntityType.LWPOLYLINE && ((DxfLwPolyline)entity).isClosed()) ||
+            entity.getType() == EntityType.LWPOLYLINE || // Changed line
             entity.getType() == EntityType.ARC ) { // Arcs are open paths, fill=none is typical
              styleBuilder.append("fill=\"none\" ");
         }
