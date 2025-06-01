@@ -6,11 +6,12 @@
 
     <parent>
         <groupId>com.cad</groupId>
-        <artifactId>parent</artifactId>
+        <artifactId>cad-tool</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
+    <groupId>com.cad.gui</groupId>
     <artifactId>gui</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>gui</name>
