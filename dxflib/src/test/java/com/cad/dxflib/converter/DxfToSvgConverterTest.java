@@ -279,15 +279,6 @@ class DxfToSvgConverterTest {
         String svg = svgConverter.convert(doc, defaultOptions);
 
         assertNotNull(svg);
-        // System.out.println(svg); // For debugging
-
-        // Arc 1: Center (10,10), Radius 5, StartAngle 0, EndAngle 90
-        // Color: BYLAYER (Layer 0 is default color - white/black depending on SvgConversionOptions)
-        // Expected path: M 15,10 A 5,5 0 0,1 10,15 (or similar based on calculation)
-        // Start point: x = 10 + 5*cos(0) = 15, y = 10 + 5*sin(0) = 10
-        // End point: x = 10 + 5*cos(90deg) = 10, y = 10 + 5*sin(90deg) = 15
-        // Large arc flag: 0 (90 deg sweep is <= 180)
-        // Sweep flag: 1 (positive direction from start to end angle)
         String expectedArc1Path = String.format(Locale.US,
                 "d=\"M %.3f,%.3f A %.3f,%.3f 0 %d,%d %.3f,%.3f\"",
                 15.0, 10.0, // Start point (10+5*cos(0), 10+5*sin(0))

@@ -9,7 +9,6 @@
 - `(P1)` Alta Prioridade
 - `(P2)` Média Prioridade
 - `(P3)` Baixa Prioridade
-
 ---
 
 Este documento detalha o status atual de implementação das funcionalidades planejadas para a ferramenta CAD modular e serve como um roadmap para desenvolvimentos futuros.
@@ -55,8 +54,6 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
 - `[ ] (P1)` **Interação com o Mouse para Desenho/Seleção:**
     - *Detalhe:* Implementar listeners de mouse na área de visualização para:
-        - **Seleção:** Permitir que o usuário clique para selecionar entidades DXF renderizadas (ou entidades geométricas do `Módulo de Geometria`). A seleção pode ser indicada visualmente (ex: mudança de cor, bounding box).
-        - **Desenho Básico:** Iniciar a implementação de ferramentas de desenho interativas (ex: clicar dois pontos para desenhar uma linha). Requer forte integração com o `Módulo de Geometria`.
 - `[ ] (P1)` **Barra de Ferramentas com Ações CAD:**
     - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse".
 - `[ ] (P2)` **Painel de Propriedades de Objetos:**
@@ -78,3 +75,61 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 
 ## Melhorias Futuras Planejadas
 - `[ ] (P3)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
+=======
+- [X] Estrutura Modular com Microkernel (`core`): Implementado e funcional. (Importância: **Alta**)
+- [X] Gerenciamento de Módulos (`ModuleManager` no `core`): Implementado. (Importância: **Alta**)
+- [X] Sistema de Eventos (`EventBus` no `core`): Estrutura presente. (Importância: **Média**)
+- [ ] Serviço de Logging (`LoggerService` no `core`): Estrutura presente. (Importância: **Média**)
+- [ ] Serviço de Configuração (`ConfigService` no `core`): Estrutura presente. (Importância: **Média**)
+
+**Módulos de Funcionalidade:**
+
+*   **Módulo Leitor DXF (`dxflib`)** (Importância Geral: **Alta**)
+    - [X] Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
+    - [X] Análise de Referência (Kabeja - conceitual)
+    - [X] Criação da Estrutura do Módulo `dxflib` (POM, pacotes)
+    - [X] Implementação das Estruturas de Dados Base (DxfDocument, DxfEntity, Point2D/3D, etc.)
+    - [X] Implementação do Parser para Entidades DXF Iniciais (LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, INSERT)
+    - [X] Adição de Testes Unitários para Entidades Iniciais
+    - [X] Implementação da Leitura de Seções (TABLES (LAYER, LTYPE), BLOCKS)
+    - [X] Adição de Testes Unitários para Tabelas (LAYER, LTYPE) e Blocos
+    - `[~]` Implementação do Conversor DXF para SVG (para entidades parseadas)
+    - `[~]` Adição de Testes Unitários para o Conversor SVG
+
+*   **Módulo de Renderização (`rendering`)** (Importância Geral: **Alta**)
+    - [ ] Capacidade de renderizar modelos 2D (foco inicial em formato DXF). (Importância: **Alta**)
+    - [ ] Capacidade de renderizar modelos 3D. (Importância: **Baixa**)
+    - `[ ]` Integração com a área de visualização da GUI. (Importância: **Alta**)
+
+*   **Módulo de Geometria (`geometry`)** (Importância Geral: **Média**)
+    - [ ] Implementação de operações geométricas básicas (criação de linhas, círculos, etc.). (Importância: **Média**)
+    - [ ] Implementação de operações geométricas avançadas (booleanas, etc.). (Importância: **Baixa**)
+
+*   **Módulo de Física (`physics`)** (Importância Geral: **Baixa**)
+    - [ ] Implementação de simulações físicas.
+
+*   **Módulo de Exportação (`export`)** (Importância Geral: **Média**)
+    - [X] Submódulo para exportação PDF (`modules/export/pdf`): Estrutura presente.
+    - [X] Submódulo para exportação STL (`modules/export/stl`): Estrutura presente.
+    - [ ] Funcionalidade de exportação efetivamente implementada em cada submódulo. (Importância: **Média**)
+
+*   **Sistema de Plugins (`plugins`)** (Importância Geral: **Baixa**)
+    - [X] Estrutura para carregamento de plugins: Presente (`custom_plugin` como exemplo).
+    - [ ] Documentação/API clara para desenvolvimento de plugins. (Importância: **Baixa**)
+
+**Interface Gráfica do Usuário (`gui`):** (Importância Geral: **Alta**)
+- [X] Criação do Módulo `gui`: Concluído.
+- [X] Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico).
+- [X] Menu Básico: Implementado ("Arquivo" > "Sair").
+- [X] Placeholder para Área de Visualização CAD: Adicionado (JPanel vazio).
+- `[ ]` Integração da Lógica de Renderização (conectar `rendering` ao placeholder da GUI). (Importância: **Alta**)
+- `[ ]` Barra de Ferramentas com Ações CAD (Abrir, Salvar, Zoom, Pan). (Importância: **Alta**)
+- `[ ]` Painel de Propriedades de Objetos. (Importância: **Média**)
+- `[ ]` Gerenciamento de Camadas (Layers) na GUI (toggle de visibilidade). (Importância: **Média**)
+- `[ ]` Interação com o Mouse para Desenho/Seleção (foco inicial em visualização: Zoom/Pan). (Importância: **Alta**)
+
+**Melhorias Futuras Planejadas:**
+- `[ ]` Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade). (Importância: **Média/Alta** - mas após DXF)
+- `[ ]` Outras Entidades DXF (HATCH, DIMENSION, SPLINE, ELLIPSE, etc.) - adicionar ao `dxflib`. (Importância: **Baixa/Média** - dependendo da entidade)
+
+---
