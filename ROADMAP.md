@@ -5,6 +5,11 @@
 - `[~]` Parcialmente Implementado ou Versão Básica Existente
 - `[ ]` Não Implementado
 
+**Legenda de Prioridade (para itens não implementados `[ ]` ou `[~]`):**
+- `(P1)` Alta Prioridade
+- `(P2)` Média Prioridade
+- `(P3)` Baixa Prioridade
+
 ---
 
 Este documento detalha o status atual de implementação das funcionalidades planejadas para a ferramenta CAD modular e serve como um roadmap para desenvolvimentos futuros.
@@ -15,37 +20,49 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Estrutura Modular com Microkernel (`core`): Implementado e funcional.
 - [X] Gerenciamento de Módulos (`ModuleManager` no `core`): Implementado.
 - [X] Sistema de Eventos (`EventBus` no `core`): Estrutura presente (uso específico a ser detalhado).
-- [ ] Serviço de Logging (`LoggerService` no `core`): Estrutura presente, utilização efetiva a ser verificada.
-- [ ] Serviço de Configuração (`ConfigService` no `core`): Estrutura presente, utilização efetiva a ser verificada.
+- `[ ] (P2)` **Serviço de Logging (`LoggerService` no `core`):** Estrutura presente, utilização efetiva a ser verificada.
+    - *Detalhe:* Integrar um framework de logging (ex: SLF4J + Logback) e disseminar o uso de logs significativos em todos os módulos para facilitar a depuração e monitoramento.
+- `[ ] (P2)` **Serviço de Configuração (`ConfigService` no `core`):** Estrutura presente, utilização efetiva a ser verificada.
+    - *Detalhe:* Implementar a capacidade de carregar/salvar configurações da aplicação (ex: de um arquivo `.properties` ou JSON) e fornecer acesso a essas configurações para outros módulos.
 
 **Módulos de Funcionalidade:**
 *Módulo de Geometria (`geometry`):*
-- [ ] Implementação de operações geométricas básicas (criação de linhas, círculos, etc.).
-- [ ] Implementação de operações geométricas avançadas (booleanas, etc.).
+- `[ ] (P1)` **Implementação de operações geométricas básicas (criação de linhas, círculos, etc.):**
+    - *Detalhe:* Definir e implementar classes para representar entidades geométricas 2D básicas (Ponto, Linha, Círculo, Arco, Polilinha). Incluir métodos para criação e manipulação inicial dessas entidades. Essencial para qualquer funcionalidade de desenho.
+- `[ ] (P2)` **Implementação de operações geométricas avançadas (booleanas, etc.):**
+    - *Detalhe:* Desenvolver algoritmos para operações booleanas (união, interseção, diferença) entre formas 2D, cálculo de offset, filetes e chanfros.
 *Módulo de Renderização (`rendering`):*
-- [ ] Capacidade de renderizar modelos 2D (foco inicial em formato DXF).
-- [ ] Capacidade de renderizar modelos 3D.
+- `[ ] (P2)` **Capacidade de renderizar modelos 2D (foco inicial em formato DXF):**
+    - *Detalhe:* Além da conversão para SVG, explorar a renderização direta de entidades geométricas do `Módulo de Geometria` na GUI. Isso pode envolver a criação de um motor de renderização 2D customizado ou a adaptação de bibliotecas existentes para desenhar em um `java.awt.Graphics2D` (ou similar) dentro do `JSVGCanvas` ou de um painel dedicado. Permitiria maior controle sobre zoom, pan, e seleção visual.
+- `[ ] (P3)` **Capacidade de renderizar modelos 3D.**
 - [X] Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
 *Módulo de Física (`physics`):*
-- [ ] Implementação de simulações físicas.
+- `[ ] (P3)` **Implementação de simulações físicas.**
 *Módulo de Exportação (`export`):*
 - [X] Submódulo para exportação PDF (`modules/export/pdf`): Estrutura presente.
 - [X] Submódulo para exportação STL (`modules/export/stl`): Estrutura presente.
-- [ ] Funcionalidade de exportação efetivamente implementada em cada submódulo.
+- `[ ] (P2)` **Funcionalidade de exportação efetivamente implementada em cada submódulo:**
+    - *Detalhe:* Implementar a lógica para converter o `DxfDocument` ou as entidades do `Módulo de Geometria` para os formatos PDF e STL e permitir que o usuário salve o resultado em arquivo.
 *Sistema de Plugins (`plugins`):*
 - [X] Estrutura para carregamento de plugins: Presente (`custom_plugin` como exemplo).
-- [ ] Documentação/API clara para desenvolvimento de plugins.
+- `[ ] (P3)` **Documentação/API clara para desenvolvimento de plugins.**
 
 **Interface Gráfica do Usuário (`gui`):**
 - [X] Criação do Módulo `gui`: Concluído.
 - [X] Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico).
-- [X] Menu Básico: Implementado ("Arquivo" > "Sair").
-- [X] Placeholder para Área de Visualização CAD: Adicionado (JPanel vazio).
+- [X] Menu Básico: Implementado ("Arquivo" > "Sair", "Abrir DXF...").
+- [X] Placeholder para Área de Visualização CAD: Adicionado e funcional com renderização SVG.
 - [X] Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
-- [ ] Barra de Ferramentas com Ações CAD: Pendente.
-- [ ] Painel de Propriedades de Objetos: Pendente.
-- [ ] Gerenciamento de Camadas (Layers): Pendente.
-- [ ] Interação com o Mouse para Desenho/Seleção: Pendente.
+- `[ ] (P1)` **Interação com o Mouse para Desenho/Seleção:**
+    - *Detalhe:* Implementar listeners de mouse na área de visualização para:
+        - **Seleção:** Permitir que o usuário clique para selecionar entidades DXF renderizadas (ou entidades geométricas do `Módulo de Geometria`). A seleção pode ser indicada visualmente (ex: mudança de cor, bounding box).
+        - **Desenho Básico:** Iniciar a implementação de ferramentas de desenho interativas (ex: clicar dois pontos para desenhar uma linha). Requer forte integração com o `Módulo de Geometria`.
+- `[ ] (P1)` **Barra de Ferramentas com Ações CAD:**
+    - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse".
+- `[ ] (P2)` **Painel de Propriedades de Objetos:**
+    - *Detalhe:* Criar um painel (ex: `JPanel` em um `JSplitPane` com a área de visualização) que exiba as propriedades da(s) entidade(s) selecionada(s) (ex: coordenadas, raio, cor, camada) e permita sua edição.
+- `[ ] (P2)` **Gerenciamento de Camadas (Layers):**
+    - *Detalhe:* Desenvolver um painel ou diálogo para listar as camadas presentes no desenho, permitindo ao usuário criar novas camadas, renomeá-las, definir sua cor, visibilidade, e a camada ativa para desenho.
 
 ## Módulo Leitor DXF (dxflib)
 - [X] Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
@@ -56,8 +73,8 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Adição de Testes Unitários para Entidades Iniciais
 - [X] Implementação da Leitura de Tabelas (LAYER) e Seção de Blocos (BLOCK)
 - [X] Adição de Testes Unitários para Layers e Blocos
-- [~] Implementação do Conversor DXF para SVG (para entidades parseadas)
-- [~] Adição de Testes Unitários para o Conversor SVG
+- [X] Implementação do Conversor DXF para SVG (para entidades parseadas)
+- [X] Adição de Testes Unitários para o Conversor SVG
 
 ## Melhorias Futuras Planejadas
-- [ ] Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).
+- `[ ] (P3)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
