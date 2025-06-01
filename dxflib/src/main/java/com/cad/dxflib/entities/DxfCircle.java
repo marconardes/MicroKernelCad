@@ -3,7 +3,7 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
-// import com.cad.dxflib.math.Bounds; // Placeholder for later
+import com.cad.dxflib.math.Bounds;
 
 public class DxfCircle extends AbstractDxfEntity {
     private Point3D center;
@@ -38,14 +38,15 @@ public class DxfCircle extends AbstractDxfEntity {
         return EntityType.CIRCLE;
     }
 
-    // @Override
-    // public Bounds getBounds() {
-    //     // Implementation will be added later
-    //     Bounds bounds = new Bounds();
-    //     bounds.addToBounds(center.x - radius, center.y - radius, center.z);
-    //     bounds.addToBounds(center.x + radius, center.y + radius, center.z);
-    //     return bounds;
-    // }
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        if (center != null && radius > 0) {
+            bounds.addToBounds(center.x - radius, center.y - radius, center.z);
+            bounds.addToBounds(center.x + radius, center.y + radius, center.z);
+        }
+        return bounds;
+    }
 
     // @Override
     // public void transform(Object transformContext) {

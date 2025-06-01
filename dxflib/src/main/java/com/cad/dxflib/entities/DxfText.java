@@ -3,6 +3,7 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
+import com.cad.dxflib.math.Bounds;
 
 public class DxfText extends AbstractDxfEntity {
     private Point3D insertionPoint; // Group codes 10, 20, 30
@@ -68,7 +69,18 @@ public class DxfText extends AbstractDxfEntity {
         return EntityType.TEXT;
     }
 
-    // getBounds() and transform() to be implemented later
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        if (insertionPoint != null && height > 0) {
+            // Simplified bounds: a box around the insertion point with text height.
+            // Does not account for rotation or actual text width.
+            // For SVG viewBox calculation, this might be sufficient if text is not too large.
+            bounds.addToBounds(insertionPoint.x, insertionPoint.y - height, insertionPoint.z); // Approximate bottom-left
+            bounds.addToBounds(insertionPoint.x + (textValue != null ? textValue.length() * height * 0.6 : height), insertionPoint.y, insertionPoint.z); // Approximate top-right (width is a rough guess)
+        }
+        return bounds;
+    }
 
     @Override
     public String toString() {

@@ -1,6 +1,7 @@
 package com.cad.dxflib.structure;
 
 import com.cad.dxflib.common.DxfEntity;
+import com.cad.dxflib.math.Bounds;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,4 +90,29 @@ public class DxfDocument {
     }
 
     // TODO: Add methods for header, linetypes, textstyles later
+
+    public Bounds getBounds() {
+        Bounds totalBounds = new Bounds();
+        // Iterate over entities in model space
+        // (This assumes modelSpaceEntities contains all relevant top-level entities for bounds calculation)
+        for (DxfEntity entity : getModelSpaceEntities()) { // modelSpaceEntities might need to be populated correctly first
+            Bounds entityBounds = entity.getBounds();
+            if (entityBounds != null && entityBounds.isValid()) {
+                totalBounds.addToBounds(entityBounds);
+            }
+        }
+
+        // Alternatively, iterate through layers and then entities in layers
+        // for (DxfLayer layer : layers.values()) {
+        //    if (layer.isVisible()) { // Consider only visible layers
+        //        for (DxfEntity entity : layer.getEntities()) {
+        //            Bounds entityBounds = entity.getBounds();
+        //            if (entityBounds != null && entityBounds.isValid()) {
+        //                totalBounds.addToBounds(entityBounds);
+        //            }
+        //        }
+        //    }
+        // }
+        return totalBounds;
+    }
 }

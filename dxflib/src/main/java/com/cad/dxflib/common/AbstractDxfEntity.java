@@ -1,5 +1,7 @@
 package com.cad.dxflib.common;
 
+import com.cad.dxflib.math.Bounds;
+
 public abstract class AbstractDxfEntity implements DxfEntity {
     protected String layerName = "0"; // Default layer
     protected int color = 256; // DXF color code 256 = BYLAYER
@@ -52,8 +54,8 @@ public abstract class AbstractDxfEntity implements DxfEntity {
     @Override
     public abstract EntityType getType();
 
-    // @Override
-    // public abstract Bounds getBounds(); // Will be uncommented when Bounds is defined
+    @Override
+    public abstract Bounds getBounds();
 
     // @Override
     // public abstract void transform(Object transformContext); // Will be uncommented

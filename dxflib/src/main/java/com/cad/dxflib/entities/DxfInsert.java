@@ -3,6 +3,10 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
+import com.cad.dxflib.math.Bounds;
+// import com.cad.dxflib.structure.DxfBlock; // For future, more complex getBounds
+// import com.cad.dxflib.structure.DxfDocument; // For future, more complex getBounds
+
 
 public class DxfInsert extends AbstractDxfEntity {
     private String blockName;       // Group code 2
@@ -61,8 +65,42 @@ public class DxfInsert extends AbstractDxfEntity {
         return EntityType.INSERT;
     }
 
-    // getBounds() and transform() will be more complex for INSERT as they depend on the Block's entities
-    // and the transformation applied. To be implemented later.
+    @Override
+    public Bounds getBounds() {
+        // TODO: This is a complex calculation.
+        // It requires resolving the block definition, then transforming the bounds
+        // of each entity within the block by the insert's scale, rotation, and position.
+        // For now, return a simple bounds around the insertion point or an invalid one.
+        Bounds bounds = new Bounds();
+        if (this.insertionPoint != null) {
+             bounds.addToBounds(this.insertionPoint);
+        }
+        // A more accurate (but still simplified) version might consider the block's own bounds
+        // and transform that. But block bounds themselves need to be calculated.
+        // Example:
+        // if (this.document != null && this.blockName != null) { // document field would need to be added
+        //     DxfBlock block = this.document.getBlock(this.blockName);
+        //     if (block != null) {
+        //         Bounds blockBounds = block.getBounds(); // Requires DxfBlock to have getBounds()
+        //         if (blockBounds.isValid()) {
+        //             // This is still simplified as it doesn't account for rotation of the block bounds
+        //             Point3D min = new Point3D(
+        //                 insertionPoint.x + blockBounds.getMinX() * xScale,
+        //                 insertionPoint.y + blockBounds.getMinY() * yScale,
+        //                 insertionPoint.z + blockBounds.getMinZ() // Assuming no zScale for now
+        //             );
+        //             Point3D max = new Point3D(
+        //                 insertionPoint.x + blockBounds.getMaxX() * xScale,
+        //                 insertionPoint.y + blockBounds.getMaxY() * yScale,
+        //                 insertionPoint.z + blockBounds.getMaxZ()
+        //             );
+        //             bounds.addToBounds(min);
+        //             bounds.addToBounds(max);
+        //         }
+        //     }
+        // }
+        return bounds;
+    }
 
     @Override
     public String toString() {

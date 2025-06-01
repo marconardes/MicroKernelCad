@@ -3,6 +3,8 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point2D; // LWPOLYLINE vertices are 2D with an elevation
+import com.cad.dxflib.common.Point3D; // For converting Point2D + elevation
+import com.cad.dxflib.math.Bounds;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,7 +80,18 @@ public class DxfLwPolyline extends AbstractDxfEntity {
         return EntityType.LWPOLYLINE;
     }
 
-    // getBounds() and transform() to be implemented later
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        if (vertices != null && !vertices.isEmpty()) {
+            for (Point2D p : vertices) {
+                bounds.addToBounds(p.x, p.y, this.elevation);
+            }
+            // TODO: For more accuracy, if bulges are present, the arc segments
+            // formed by bulges should also be considered in the bounds calculation.
+        }
+        return bounds;
+    }
 
     @Override
     public String toString() {

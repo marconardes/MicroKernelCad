@@ -3,7 +3,7 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
-// import com.cad.dxflib.math.Bounds; // Placeholder for later
+import com.cad.dxflib.math.Bounds;
 
 public class DxfLine extends AbstractDxfEntity {
     private Point3D startPoint;
@@ -35,15 +35,14 @@ public class DxfLine extends AbstractDxfEntity {
         return EntityType.LINE;
     }
 
-    // @Override
-    // public Bounds getBounds() {
-    //     // Implementation will be added later when Bounds class is defined
-    //     Bounds bounds = new Bounds();
-    //     bounds.addToBounds(this.startPoint);
-    //     bounds.addToBounds(this.endPoint);
-    //     // Consider thickness for bounds if applicable
-    //     return bounds;
-    // }
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        if (startPoint != null) bounds.addToBounds(this.startPoint);
+        if (endPoint != null) bounds.addToBounds(this.endPoint);
+        // TODO: Consider entity thickness for Z bounds if relevant for 2D projection
+        return bounds;
+    }
 
     // @Override
     // public void transform(Object transformContext) {
