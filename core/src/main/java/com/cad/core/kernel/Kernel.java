@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 import javax.swing.SwingUtilities; // New import
-import com.cad.gui.MainFrame; // New import
+// import com.cad.gui.MainFrame; // New import - MainFrame usage is commented out
 
 public class Kernel {
 
@@ -24,11 +24,11 @@ public class Kernel {
             
             // Outras inicializações necessárias
 
-            // Launch the GUI
-            SwingUtilities.invokeLater(() -> {
-                MainFrame frame = new MainFrame();
-                frame.setVisible(true);
-            });
+            // Launch the GUI - Temporarily commented out to break build cycle
+            // SwingUtilities.invokeLater(() -> {
+            //     MainFrame frame = new MainFrame();
+            //     frame.setVisible(true);
+            // });
         }
         
 

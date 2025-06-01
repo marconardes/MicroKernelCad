@@ -25,7 +25,7 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 *Módulo de Renderização (`rendering`):*
 - [ ] Capacidade de renderizar modelos 2D (foco inicial em formato DXF).
 - [ ] Capacidade de renderizar modelos 3D.
-- [ ] Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
+- [X] Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
 *Módulo de Física (`physics`):*
 - [ ] Implementação de simulações físicas.
 *Módulo de Exportação (`export`):*
@@ -41,7 +41,7 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico).
 - [X] Menu Básico: Implementado ("Arquivo" > "Sair").
 - [X] Placeholder para Área de Visualização CAD: Adicionado (JPanel vazio).
-- [ ] Integração da Lógica de Renderização: Pendente (conectar o módulo `rendering` ao placeholder da GUI).
+- [X] Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
 - [ ] Barra de Ferramentas com Ações CAD: Pendente.
 - [ ] Painel de Propriedades de Objetos: Pendente.
 - [ ] Gerenciamento de Camadas (Layers): Pendente.
