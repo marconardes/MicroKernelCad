@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.cad.tool</groupId>
+        <artifactId>cad-tool</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath> <!-- Assuming dxflib is at the same level as core, gui -->
+    </parent>
+
+    <groupId>com.cad.dxflib</groupId>
+    <artifactId>dxflib</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Jules DXF Reader Library</name>
+    <description>A Java library for parsing and processing DXF files.</description>
+
+    <properties>
+        <!-- Inherit Java version from parent, or define explicitly if needed -->
+        <!-- <maven.compiler.source>21</maven.compiler.source> -->
+        <!-- <maven.compiler.target>21</maven.compiler.target> -->
+        <!-- <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> -->
+    </properties>
+
+    <dependencies>
+        <!-- JUnit 5 for testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Apache Commons Lang (Optional, but often useful for utilities) -->
+        <!--
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+        </dependency>
+        -->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                     <!-- Source/target will be picked from properties (ideally from root parent) -->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

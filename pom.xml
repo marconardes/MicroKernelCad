@@ -18,5 +18,6 @@
     <module>plugins/custom_plugin</module>
     <module>core</module>
     <module>gui</module>
+    <module>dxflib</module>
   </modules>
 </project>

@@ -16,9 +16,9 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [ ] Implementação de operações geométricas básicas (criação de linhas, círculos, etc.).
 - [ ] Implementação de operações geométricas avançadas (booleanas, etc.).
 *Módulo de Renderização (`rendering`):*
-- [ ] Capacidade de renderizar modelos 2D.
+- [ ] Capacidade de renderizar modelos 2D (foco inicial em formato DXF).
 - [ ] Capacidade de renderizar modelos 3D.
-- [ ] Integração com a área de visualização da GUI.
+- [ ] Integração com a área de visualização da GUI (para renderização DXF).
 *Módulo de Física (`physics`):*
 - [ ] Implementação de simulações físicas.
 *Módulo de Exportação (`export`):*
@@ -39,3 +39,6 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [ ] Painel de Propriedades de Objetos: Pendente.
 - [ ] Gerenciamento de Camadas (Layers): Pendente.
 - [ ] Interação com o Mouse para Desenho/Seleção: Pendente.
+
+## Melhorias Futuras Planejadas
+- [ ] Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).
