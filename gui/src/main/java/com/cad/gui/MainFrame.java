@@ -16,24 +16,24 @@ public class MainFrame extends JFrame {
         setTitle("CAD Tool");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
+
         // Set layout and add placeholder
         setLayout(new BorderLayout()); // New line
-        
+
         cadViewPlaceholder = new JPanel();
-        cadViewPlaceholder.setBackground(Color.LIGHT_GRAY); 
+        cadViewPlaceholder.setBackground(Color.LIGHT_GRAY);
         add(cadViewPlaceholder, BorderLayout.CENTER);
 
         // --- Add Menu Bar ---
         JMenuBar menuBar = new JMenuBar(); // New
-        
+
         JMenu fileMenu = new JMenu("File"); // New
         menuBar.add(fileMenu); // New
-        
+
         JMenuItem exitMenuItem = new JMenuItem("Exit"); // New
         exitMenuItem.addActionListener(e -> System.exit(0)); // New
         fileMenu.add(exitMenuItem); // New
-        
+
         setJMenuBar(menuBar); // New
         // --- End Menu Bar ---
     }
