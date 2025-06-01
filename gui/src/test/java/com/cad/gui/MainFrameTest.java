@@ -1,31 +1,29 @@
 package com.cad.gui;
 
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Disabled; // Re-add import
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail; // Add for Assertions.fail
 
 public class MainFrameTest {
 
     /**
      * Tests basic instantiation of the MainFrame.
      * Currently disabled because MainFrame's constructor (via its init() method)
-     * initializes Swing components (like JSVGCanvas from Batik) that require a graphical
-     * environment, leading to a HeadlessException even when 'java.awt.headless=true'
-     * is set.
+     * initializes Swing components (including the JFrame itself, menus, and potentially
+     * other components like JSVGCanvas if not sufficiently deferred) that require a graphical
+     * environment. This leads to a HeadlessException even when 'java.awt.headless=true'
+     * is set by Surefire.
      *
-     * To enable this test, MainFrame.init() would need to be refactored
-     * to better support headless environments, for example, by deferring the
-     * initialization of problematic components or by allowing them to be mocked.
+     * Enabling this test in a truly headless environment would likely require
+     * a significant architectural refactoring of MainFrame to separate UI logic
+     * from component instantiation, or to use UI testing tools that can simulate a head.
+     * The lazy initialization of JSVGCanvas alone was not sufficient to prevent this.
      */
     @Test
-    @Disabled("Fails with HeadlessException: MainFrame/JSVGCanvas initialization requires a graphical environment. Refactor MainFrame.init() for headless testing.")
+    @Disabled("Fails with HeadlessException: Full JFrame/Swing component initialization in MainFrame.init() requires a graphical environment or significant refactoring.")
     public void testMainFrameCreation() {
-        // Test if the MainFrame can be instantiated without errors.
-        // This is a basic smoke test.
-        // It's important to run Swing instantiation on the Event Dispatch Thread (EDT)
-        // if the components were to be shown or interact with system resources,
-        // but for a simple instantiation test, it might not be strictly necessary.
-        // However, to be safe and avoid potential headless environment issues:
+        // Original test body (or a simplified version if it was changed too much)
         try {
             javax.swing.SwingUtilities.invokeAndWait(() -> {
                 MainFrame frame = new MainFrame();
@@ -33,7 +31,8 @@ public class MainFrameTest {
             });
         } catch (Exception e) {
             // Fail the test if any exception occurs during instantiation on the EDT
-            org.junit.jupiter.api.Assertions.fail("MainFrame instantiation failed: " + e.getMessage(), e);
+            // Using Assertions.fail for consistency with JUnit 5
+            fail("MainFrame instantiation failed: " + e.getMessage(), e);
         }
     }
 }
