@@ -8,7 +8,9 @@ public class AppLauncher {
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(() -> {
             MainFrame frame = new MainFrame();
-            frame.setVisible(true);
+            // The MainFrame constructor now calls init() internally.
+            // So, we just need to call start() to make it visible.
+            frame.start();
         });
     }
 }

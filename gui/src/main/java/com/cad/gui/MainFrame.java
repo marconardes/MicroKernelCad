@@ -18,13 +18,20 @@ import java.io.IOException; // Para exceções do serviço
 // Nova importação para o serviço de renderização
 import com.cad.modules.rendering.DxfRenderService;
 import com.cad.dxflib.parser.DxfParserException; // Para exceção do serviço
+import com.cad.core.api.ModuleInterface; // Added import
 
-public class MainFrame extends JFrame {
+public class MainFrame extends JFrame implements ModuleInterface {
 
     private JSVGCanvas svgCanvas;
     private DxfRenderService dxfRenderService; // Novo campo
 
     public MainFrame() {
+        // Call init to set up the frame
+        this.init();
+    }
+
+    @Override
+    public void init() {
         setTitle("CAD Tool");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -48,6 +55,27 @@ public class MainFrame extends JFrame {
         fileMenu.add(exitMenuItem);
 
         setJMenuBar(menuBar);
+    }
+
+    @Override
+    public void start() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            setVisible(true);
+        });
+    }
+
+    @Override
+    public void stop() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            setVisible(false);
+        });
+    }
+
+    @Override
+    public void destroy() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            dispose();
+        });
     }
 
     private void openDxfFile() {
