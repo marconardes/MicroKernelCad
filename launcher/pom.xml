@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.cad.tool</groupId>
+        <artifactId>cad-tool</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath> <!-- Assuming launcher is a sibling to core, gui, etc. -->
+    </parent>
+
+    <artifactId>launcher</artifactId> <!-- Keep consistent groupId from parent -->
+    <version>1.0-SNAPSHOT</version>
+    <name>launcher</name>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.cad.gui</groupId>
+            <artifactId>gui</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.cad.core</groupId> <!-- If MainFrame or its setup needs anything from core directly -->
+            <artifactId>core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version> <!-- Or inherit from parent -->
+                <configuration>
+                    <source>21</source> <!-- Or inherit from parent -->
+                    <target>21</target> <!-- Or inherit from parent -->
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version> <!-- Use a recent version -->
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.cad.launcher.AppLauncher</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

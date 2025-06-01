@@ -19,5 +19,6 @@
     <module>core</module>
     <module>gui</module>
     <module>dxflib</module>
+    <module>launcher</module> <!-- New module added -->
   </modules>
 </project>
