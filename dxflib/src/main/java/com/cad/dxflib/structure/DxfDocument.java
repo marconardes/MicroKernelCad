@@ -1,6 +1,8 @@
 package com.cad.dxflib.structure;
 
 import com.cad.dxflib.common.DxfEntity;
+import com.cad.dxflib.math.Bounds;
+import com.cad.dxflib.structure.DxfLinetype; // Adicionar este import
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,7 +11,7 @@ import java.util.Map;
 public class DxfDocument {
     private Map<String, DxfLayer> layers;
     private Map<String, DxfBlock> blocks;
-    // private Map<String, DxfLinetype> linetypes; // Future
+    private Map<String, DxfLinetype> linetypes; // NOVO CAMPO
     // private Map<String, DxfTextStyle> textStyles; // Future
     // private DxfHeader headerVariables; // Future
 
@@ -22,11 +24,17 @@ public class DxfDocument {
     public DxfDocument() {
         this.layers = new HashMap<>();
         this.blocks = new HashMap<>();
+        this.linetypes = new HashMap<>(); // INICIALIZAR NOVO CAMPO
         this.modelSpaceEntities = new ArrayList<>();
 
         // Add default layer "0"
         DxfLayer defaultLayer = new DxfLayer("0");
         this.layers.put(defaultLayer.getName(), defaultLayer);
+
+        // Adicionar tipo de linha CONTINUOUS padrão
+        DxfLinetype continuousLinetype = new DxfLinetype("CONTINUOUS");
+        continuousLinetype.setDescription("Solid line");
+        this.linetypes.put(continuousLinetype.getName().toUpperCase(java.util.Locale.ROOT), continuousLinetype);
     }
 
     public DxfLayer getLayer(String name) {
@@ -89,4 +97,45 @@ public class DxfDocument {
     }
 
     // TODO: Add methods for header, linetypes, textstyles later
+
+    // NOVOS MÉTODOS para linetypes:
+    public DxfLinetype getLinetype(String name) {
+        if (name == null) return null;
+        return linetypes.get(name.toUpperCase(java.util.Locale.ROOT));
+    }
+
+    public void addLinetype(DxfLinetype linetype) {
+        if (linetype != null && linetype.getName() != null) {
+            this.linetypes.put(linetype.getName().toUpperCase(java.util.Locale.ROOT), linetype);
+        }
+    }
+
+    public Map<String, DxfLinetype> getLinetypes() {
+        return linetypes;
+    }
+
+    public Bounds getBounds() {
+        Bounds totalBounds = new Bounds();
+        // Iterate over entities in model space
+        // (This assumes modelSpaceEntities contains all relevant top-level entities for bounds calculation)
+        for (DxfEntity entity : getModelSpaceEntities()) { // modelSpaceEntities might need to be populated correctly first
+            Bounds entityBounds = entity.getBounds();
+            if (entityBounds != null && entityBounds.isValid()) {
+                totalBounds.addToBounds(entityBounds);
+            }
+        }
+
+        // Alternatively, iterate through layers and then entities in layers
+        // for (DxfLayer layer : layers.values()) {
+        //    if (layer.isVisible()) { // Consider only visible layers
+        //        for (DxfEntity entity : layer.getEntities()) {
+        //            Bounds entityBounds = entity.getBounds();
+        //            if (entityBounds != null && entityBounds.isValid()) {
+        //                totalBounds.addToBounds(entityBounds);
+        //            }
+        //        }
+        //    }
+        // }
+        return totalBounds;
+    }
 }

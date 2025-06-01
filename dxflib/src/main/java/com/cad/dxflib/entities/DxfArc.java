@@ -3,6 +3,7 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
+import com.cad.dxflib.math.Bounds;
 
 public class DxfArc extends AbstractDxfEntity {
     private Point3D center;
@@ -57,7 +58,18 @@ public class DxfArc extends AbstractDxfEntity {
         return EntityType.ARC;
     }
 
-    // getBounds() and transform() to be implemented later
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        if (center != null && radius > 0) {
+            // Simplified bounds: takes the full circle containing the arc.
+            // More precise calculation would involve checking start/end points
+            // and points at 0, 90, 180, 270 degrees if they fall within the arc span.
+            bounds.addToBounds(center.x - radius, center.y - radius, center.z);
+            bounds.addToBounds(center.x + radius, center.y + radius, center.z);
+        }
+        return bounds;
+    }
 
     @Override
     public String toString() {

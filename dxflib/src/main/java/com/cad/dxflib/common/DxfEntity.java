@@ -1,8 +1,6 @@
 package com.cad.dxflib.common;
 
-// Forward declaration for Bounds, assume it will be created in a math sub-package or similar
-// For now, to avoid compilation error if Bounds.java isn't created yet by the worker:
-// import com.cad.dxflib.math.Bounds; // This should be the actual import later
+import com.cad.dxflib.math.Bounds;
 
 public interface DxfEntity {
     EntityType getType();
@@ -19,7 +17,7 @@ public interface DxfEntity {
     void setThickness(double thickness); // Optional
 
     // We'll need a Bounds class later. For now, can be commented out or use a placeholder.
-    // Bounds getBounds();
+    Bounds getBounds();
 
     // Method to apply transformations, crucial for block inserts
     // We'll need Point3D and a transformation matrix/context class later.

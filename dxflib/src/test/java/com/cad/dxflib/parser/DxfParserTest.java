@@ -10,7 +10,9 @@ import com.cad.dxflib.entities.DxfInsert;
 import com.cad.dxflib.entities.DxfLine;
 import com.cad.dxflib.entities.DxfLwPolyline;
 import com.cad.dxflib.entities.DxfText;
+import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfDocument;
+import com.cad.dxflib.structure.DxfLayer;
 import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.util.List;
@@ -244,5 +246,96 @@ class DxfParserTest {
         assertEquals(2.0, insert.getYScale(), 0.001);
         assertEquals(15.0, insert.getRotationAngle(), 0.001);
         assertEquals(256, insert.getColor()); // Default BYLAYER
+    }
+
+    @Test
+    void testParseLayersSimple() throws DxfParserException {
+        DxfParser parser = new DxfParser();
+        InputStream inputStream = getResourceAsStream("/dxf/layers_simple.dxf");
+        DxfDocument doc = parser.parse(inputStream);
+
+        assertNotNull(doc);
+        assertNotNull(doc.getLayers());
+        // Expects "0", "MyLayer1", "MyLayer2_Off_Red", "MyLayer3_Locked_Blue"
+        assertEquals(4, doc.getLayers().size());
+
+        DxfLayer layer0 = doc.getLayer("0");
+        assertNotNull(layer0);
+        assertEquals("0", layer0.getName());
+        assertEquals(7, layer0.getColor());
+        assertEquals("CONTINUOUS", layer0.getLinetypeName());
+        assertTrue(layer0.isVisible());
+
+        DxfLayer layer1 = doc.getLayer("MyLayer1");
+        assertNotNull(layer1);
+        assertEquals("MyLayer1", layer1.getName());
+        assertEquals(1, layer1.getColor());
+        assertEquals("DASHDOT", layer1.getLinetypeName());
+        assertTrue(layer1.isVisible());
+
+        DxfLayer layer2 = doc.getLayer("MyLayer2_Off_Red");
+        assertNotNull(layer2);
+        assertEquals("MyLayer2_Off_Red", layer2.getName());
+        assertEquals(1, layer2.getColor()); // Color is stored as positive
+        assertEquals("CONTINUOUS", layer2.getLinetypeName());
+        assertFalse(layer2.isVisible()); // Visibility is false due to negative color -1
+
+        DxfLayer layer3 = doc.getLayer("MyLayer3_Locked_Blue");
+        assertNotNull(layer3);
+        assertEquals("MyLayer3_Locked_Blue", layer3.getName());
+        assertEquals(5, layer3.getColor());
+        assertEquals("HIDDEN", layer3.getLinetypeName());
+        assertTrue(layer3.isVisible());
+        // TODO: Add getFlags() to DxfLayer and assert ((flags & 4) == 4) for locked state if implemented
+    }
+
+    @Test
+    void testParseBlocksSimple() throws DxfParserException {
+        DxfParser parser = new DxfParser();
+        InputStream inputStream = getResourceAsStream("/dxf/blocks_simple.dxf");
+        DxfDocument doc = parser.parse(inputStream);
+
+        assertNotNull(doc);
+        assertNotNull(doc.getBlocks());
+        assertEquals(2, doc.getBlocks().size(), "Should parse two blocks.");
+
+        // Test SimpleSquareBlock
+        DxfBlock squareBlock = doc.getBlock("SimpleSquareBlock");
+        assertNotNull(squareBlock, "SimpleSquareBlock not found.");
+        assertEquals("SimpleSquareBlock", squareBlock.getName());
+        assertEquals(new Point3D(0.0, 0.0, 0.0), squareBlock.getBasePoint());
+        assertEquals(4, squareBlock.getEntities().size(), "SimpleSquareBlock should have 4 entities.");
+        assertTrue(squareBlock.getEntities().get(0) instanceof DxfLine, "First entity in SimpleSquareBlock should be a Line.");
+        // Add more detailed checks for entities within the block if necessary
+
+        // Test CircleInBlock
+        DxfBlock circleBlock = doc.getBlock("CircleInBlock");
+        assertNotNull(circleBlock, "CircleInBlock not found.");
+        assertEquals("CircleInBlock", circleBlock.getName());
+        assertEquals(new Point3D(5.0, 5.0, 0.0), circleBlock.getBasePoint());
+        assertEquals(1, circleBlock.getEntities().size(), "CircleInBlock should have 1 entity.");
+        assertTrue(circleBlock.getEntities().get(0) instanceof DxfCircle, "Entity in CircleInBlock should be a Circle.");
+        DxfCircle circleInBlock = (DxfCircle) circleBlock.getEntities().get(0);
+        assertEquals(new Point3D(5.0,5.0,0.0), circleInBlock.getCenter());
+        assertEquals(5.0, circleInBlock.getRadius(), 0.001);
+
+        // Test INSERT entities in ENTITIES section
+        assertNotNull(doc.getModelSpaceEntities());
+        long insertCount = doc.getModelSpaceEntities().stream().filter(e -> e.getType() == EntityType.INSERT).count();
+        assertEquals(2, insertCount, "Should be two INSERT entities in model space.");
+
+        DxfInsert insertSquare = (DxfInsert) doc.getModelSpaceEntities().stream()
+            .filter(e -> e.getType() == EntityType.INSERT && "SimpleSquareBlock".equals(((DxfInsert)e).getBlockName()))
+            .findFirst().orElse(null);
+        assertNotNull(insertSquare);
+        assertEquals(new Point3D(50.0, 50.0, 0.0), insertSquare.getInsertionPoint());
+
+        DxfInsert insertCircle = (DxfInsert) doc.getModelSpaceEntities().stream()
+            .filter(e -> e.getType() == EntityType.INSERT && "CircleInBlock".equals(((DxfInsert)e).getBlockName()))
+            .findFirst().orElse(null);
+        assertNotNull(insertCircle);
+        assertEquals(new Point3D(100.0, 100.0, 0.0), insertCircle.getInsertionPoint());
+        assertEquals(2.0, insertCircle.getXScale(), 0.001);
+        assertEquals(2.0, insertCircle.getYScale(), 0.001);
     }
 }

@@ -17,6 +17,9 @@ A aplicação é composta pelos seguintes módulos principais:
 *   **`gui` (Interface Gráfica do Usuário):**
     *   Fornece a janela principal da aplicação e todos os elementos de interação com o usuário (menus, barras de ferramentas, área de desenho).
     *   Implementado utilizando Java Swing.
+*   **`dxflib` (Biblioteca Leitora DXF):**
+    *   Módulo em desenvolvimento responsável por fazer o parsing (leitura e interpretação) de arquivos no formato DXF (ASCII, versão AutoCAD 2000/2004).
+    *   O objetivo inicial é extrair entidades geométricas como LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, e INSERT (BLOCKS) para serem usadas pelo módulo de renderização.
 *   **`modules/geometry` (Geometria):**
     *   Contém a lógica para a criação, manipulação e cálculos de formas geométricas 2D e 3D.
     *   Define as entidades base do desenho (pontos, linhas, curvas, superfícies, sólidos).

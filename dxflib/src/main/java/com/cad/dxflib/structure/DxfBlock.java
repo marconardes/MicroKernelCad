@@ -1,7 +1,8 @@
 package com.cad.dxflib.structure;
 
 import com.cad.dxflib.common.DxfEntity;
-import com.cad.dxflib.common.Point3D; // Assuming Point3D is in common
+import com.cad.dxflib.common.Point3D;
+import com.cad.dxflib.math.Bounds;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -54,5 +55,18 @@ public class DxfBlock {
     @Override
     public int hashCode() {
         return Objects.hash(name);
+    }
+
+    public Bounds getBounds() {
+        Bounds blockBounds = new Bounds();
+        if (entities != null) {
+            for (DxfEntity entity : entities) {
+                Bounds entityBounds = entity.getBounds();
+                if (entityBounds != null && entityBounds.isValid()) {
+                    blockBounds.addToBounds(entityBounds);
+                }
+            }
+        }
+        return blockBounds;
     }
 }
