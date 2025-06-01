@@ -9,10 +9,11 @@ import com.cad.dxflib.entities.DxfCircle;
 import com.cad.dxflib.entities.DxfLine;
 import com.cad.dxflib.entities.DxfLwPolyline;
 import com.cad.dxflib.entities.DxfText;
-import com.cad.dxflib.entities.DxfInsert; // Added import
-import com.cad.dxflib.structure.DxfBlock; // Added import
+import com.cad.dxflib.entities.DxfInsert;
+import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfLayer;
-import java.util.List; // For LwPolyline vertices
+import com.cad.dxflib.structure.DxfLinetype; // Added
+import java.util.List;
 import java.util.Locale;
 
 public class DxfToSvgConverter {
@@ -133,6 +134,64 @@ public class DxfToSvgConverter {
         }
     }
 
+    private String getCommonSvgStyleAttributes(DxfEntity entity, DxfDocument document, SvgConversionOptions options) {
+        StringBuilder styleBuilder = new StringBuilder();
+
+        // Color
+        String svgColor = getDxfColorAsSvg(entity.getColor(), document, entity.getLayerName(), options);
+        styleBuilder.append(String.format(Locale.US, "stroke=\"%s\" ", svgColor));
+
+        // Stroke Width
+        double strokeWidth = options.getStrokeWidth();
+        if (entity.getType() == EntityType.LWPOLYLINE) {
+           DxfLwPolyline poly = (DxfLwPolyline) entity;
+           if (poly.getConstantWidth() > 0) {
+               strokeWidth = poly.getConstantWidth();
+           }
+        }
+        styleBuilder.append(String.format(Locale.US, "stroke-width=\"%.3f\" ", strokeWidth));
+
+        // Linetype -> stroke-dasharray
+        String linetypeName = entity.getLinetypeName();
+        if (linetypeName == null || "BYLAYER".equalsIgnoreCase(linetypeName)) {
+            DxfLayer layer = document.getLayer(entity.getLayerName());
+            if (layer != null) {
+                linetypeName = layer.getLinetypeName();
+            } else {
+                linetypeName = "CONTINUOUS"; // Fallback
+            }
+        }
+
+        if ("BYBLOCK".equalsIgnoreCase(linetypeName)) {
+            // This part is tricky without context of the INSERT.
+            // For direct entities or entities within a block being resolved by INSERT,
+            // this context needs to be passed down or handled.
+            // For now, if we encounter BYBLOCK at this level, assume CONTINUOUS.
+            // The appendInsertSvg method will handle BYBLOCK for entities within the block.
+            linetypeName = "CONTINUOUS";
+        }
+
+        if (linetypeName != null && !linetypeName.equalsIgnoreCase("CONTINUOUS")) {
+            DxfLinetype ltypeDef = document.getLinetype(linetypeName);
+            if (ltypeDef != null && !ltypeDef.isContinuous()) {
+                String dashArray = ltypeDef.getSvgStrokeDashArray();
+                if (!"none".equals(dashArray) && !dashArray.isEmpty()) {
+                    styleBuilder.append(String.format(Locale.US, "stroke-dasharray=\"%s\" ", dashArray));
+                }
+            }
+        }
+
+        // Fill
+        if (entity.getType() == EntityType.CIRCLE ||
+            (entity.getType() == EntityType.LWPOLYLINE && ((DxfLwPolyline)entity).isClosed()) ||
+            entity.getType() == EntityType.ARC ) { // Arcs are open paths, fill=none is typical
+             styleBuilder.append("fill=\"none\" ");
+        }
+        // TEXT fill is handled in appendTextSvg
+
+        return styleBuilder.toString().trim();
+    }
+
     private String getDxfColorAsSvg(int dxfColorIndex, DxfDocument document, String layerName, SvgConversionOptions options) {
         int resolvedColorIndex = dxfColorIndex;
 
@@ -187,30 +246,28 @@ public class DxfToSvgConverter {
     }
 
     private void appendLineSvg(DxfLine line, DxfDocument document, SvgConversionOptions options, StringBuilder svgBuilder) {
-        String color = getDxfColorAsSvg(line.getColor(), document, line.getLayerName(), options);
+        String styleAttributes = getCommonSvgStyleAttributes(line, document, options);
         svgBuilder.append(String.format(Locale.US,
-                "    <line x1=\"%.3f\" y1=\"%.3f\" x2=\"%.3f\" y2=\"%.3f\" stroke=\"%s\" stroke-width=\"%.3f\" />\n",
+                "    <line x1=\"%.3f\" y1=\"%.3f\" x2=\"%.3f\" y2=\"%.3f\" %s />\n",
                 line.getStartPoint().x,
                 line.getStartPoint().y,
                 line.getEndPoint().x,
                 line.getEndPoint().y,
-                color,
-                options.getStrokeWidth()));
+                styleAttributes));
     }
 
     private void appendCircleSvg(DxfCircle circle, DxfDocument document, SvgConversionOptions options, StringBuilder svgBuilder) {
-        String color = getDxfColorAsSvg(circle.getColor(), document, circle.getLayerName(), options);
+        String styleAttributes = getCommonSvgStyleAttributes(circle, document, options);
         svgBuilder.append(String.format(Locale.US,
-                "    <circle cx=\"%.3f\" cy=\"%.3f\" r=\"%.3f\" stroke=\"%s\" stroke-width=\"%.3f\" fill=\"none\" />\n",
+                "    <circle cx=\"%.3f\" cy=\"%.3f\" r=\"%.3f\" %s />\n",
                 circle.getCenter().x,
                 circle.getCenter().y,
                 circle.getRadius(),
-                color,
-                options.getStrokeWidth()));
+                styleAttributes));
     }
 
     private void appendArcSvg(DxfArc arc, DxfDocument document, SvgConversionOptions options, StringBuilder svgBuilder) {
-        String color = getDxfColorAsSvg(arc.getColor(), document, arc.getLayerName(), options);
+        String styleAttributes = getCommonSvgStyleAttributes(arc, document, options);
 
         double radius = arc.getRadius();
         Point3D center = arc.getCenter();
@@ -238,14 +295,12 @@ public class DxfToSvgConverter {
                 endX, endY);
 
         svgBuilder.append(String.format(Locale.US,
-                "    <path d=\"%s\" stroke=\"%s\" stroke-width=\"%.3f\" fill=\"none\" />\n",
+                "    <path d=\"%s\" %s />\n",
                 pathData,
-                color,
-                options.getStrokeWidth()));
+                styleAttributes));
     }
 
     private void appendLwPolylineSvg(DxfLwPolyline lwpoly, DxfDocument document, SvgConversionOptions options, StringBuilder svgBuilder) {
-        String color = getDxfColorAsSvg(lwpoly.getColor(), document, lwpoly.getLayerName(), options);
         List<Point2D> vertices = lwpoly.getVertices();
         List<Double> bulges = lwpoly.getBulges();
 
@@ -346,15 +401,18 @@ public class DxfToSvgConverter {
             }
         }
 
-        String fill = "none";
-        double strokeWidth = (lwpoly.getConstantWidth() > 0) ? lwpoly.getConstantWidth() : options.getStrokeWidth();
+        String fill = "none"; // Already handled by getCommonSvgStyleAttributes if logic is there
+        // String color will come from styleAttributes
+        // double strokeWidth will come from styleAttributes (or be overridden if constantWidth > 0)
+
+        String styleAttributes = getCommonSvgStyleAttributes(lwpoly, document, options);
+        // If lwpoly.getConstantWidth() > 0, styleAttributes already contains the correct stroke-width.
+        // The getCommonSvgStyleAttributes was updated to handle this.
 
         svgBuilder.append(String.format(Locale.US,
-                "    <path d=\"%s\" stroke=\"%s\" stroke-width=\"%.3f\" fill=\"%s\" />\n",
+                "    <path d=\"%s\" %s />\n", // fill="none" is part of styleAttributes now
                 pathData.toString(),
-                color,
-                strokeWidth,
-                fill));
+                styleAttributes));
     }
 
     private void appendTextSvg(DxfText text, DxfDocument document, SvgConversionOptions options, StringBuilder svgBuilder) {
@@ -434,8 +492,10 @@ public class DxfToSvgConverter {
 
             String originalEntityLayer = entityInBlock.getLayerName();
             int originalEntityColor = entityInBlock.getColor();
+            String originalEntityLinetype = entityInBlock.getLinetypeName(); // Save linetype
             boolean changedLayer = false;
             boolean changedColor = false;
+            boolean linetypeChanged = false;
 
             if ("0".equals(originalEntityLayer)) {
                 entityInBlock.setLayerName(insert.getLayerName());
@@ -445,11 +505,30 @@ public class DxfToSvgConverter {
                 changedColor = true;
                 if (insert.getColor() == 256) {
                     DxfLayer insertLayer = document.getLayer(insert.getLayerName());
-                    entityInBlock.setColor(insertLayer != null ? insertLayer.getColor() : 7);
+                    entityInBlock.setColor(insertLayer != null ? Math.abs(insertLayer.getColor()) : 7); // Use absolute color
                 } else if (insert.getColor() != 0) {
                      entityInBlock.setColor(insert.getColor());
-                } else {
+                } else { // INSERT is also BYBLOCK
                     entityInBlock.setColor(7);
+                }
+            }
+            if ("BYBLOCK".equalsIgnoreCase(entityInBlock.getLinetypeName())) {
+                String insertLinetype = insert.getLinetypeName();
+                if (insertLinetype == null || "BYLAYER".equalsIgnoreCase(insertLinetype)) {
+                    DxfLayer insertLayer = document.getLayer(insert.getLayerName());
+                    if (insertLayer != null) {
+                        entityInBlock.setLinetypeName(insertLayer.getLinetypeName());
+                        linetypeChanged = true;
+                    } else {
+                        entityInBlock.setLinetypeName("CONTINUOUS");
+                        linetypeChanged = true;
+                    }
+                } else if (!"BYBLOCK".equalsIgnoreCase(insertLinetype)) {
+                    entityInBlock.setLinetypeName(insertLinetype);
+                    linetypeChanged = true;
+                } else { // INSERT itself is BYBLOCK for linetype
+                    entityInBlock.setLinetypeName("CONTINUOUS");
+                    linetypeChanged = true;
                 }
             }
 
@@ -458,6 +537,7 @@ public class DxfToSvgConverter {
 
             if (changedLayer) entityInBlock.setLayerName(originalEntityLayer);
             if (changedColor) entityInBlock.setColor(originalEntityColor);
+            if (linetypeChanged) entityInBlock.setLinetypeName(originalEntityLinetype); // Restore linetype
         }
         svgBuilder.append("  </g>\n");
     }

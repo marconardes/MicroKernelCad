@@ -266,4 +266,38 @@ class DxfToSvgConverterTest {
         assertTrue(svg.contains("stroke=\"" + defaultOptions.getDefaultStrokeColor() + "\""),
             "LWPolyline with bulges SVG color is not the default. SVG: \n" + svg);
     }
+
+    @Test
+    void testConvertEntitiesWithLinetypesToSvg() throws DxfParserException {
+        InputStream inputStream = getResourceAsStream("/dxf/entities_with_linetypes.dxf");
+        DxfDocument doc = dxfParser.parse(inputStream);
+        String svg = svgConverter.convert(doc, defaultOptions);
+
+        assertNotNull(svg);
+        // System.out.println(svg);
+
+        String expectedDashDotPattern = "stroke-dasharray=\"0.500 0.250 1.0 0.250\"";
+        assertTrue(svg.contains(expectedDashDotPattern),
+            "SVG should contain DASHDOT pattern. Expected: " + expectedDashDotPattern + "\nSVG: " + svg);
+
+        String expectedDottedPattern = "stroke-dasharray=\"1.0 0.200\"";
+        assertTrue(svg.contains(expectedDottedPattern),
+            "SVG should contain DOTTED pattern for circle on LayerDotted. Expected: " + expectedDottedPattern + "\nSVG: " + svg);
+
+        String arcPathStart = "<path d=\"M 60.000,50.000 A 10.000,10.000 0 0,1 50.000,60.000\"";
+        int arcIndex = svg.indexOf(arcPathStart);
+        assertTrue(arcIndex != -1, "Arc path not found in SVG. SVG: " + svg);
+        int endOfArcTag = svg.indexOf("/>", arcIndex);
+        String arcTag = svg.substring(arcIndex, endOfArcTag);
+        assertFalse(arcTag.contains("stroke-dasharray="),
+            "Arc with CONTINUOUS linetype should not have stroke-dasharray. Found: " + arcTag);
+
+        String polyPathStart = "<path d=\"M 70.000,70.000 L 100.000,70.000\"";
+        int polyIndex = svg.indexOf(polyPathStart); // This polyline has 0 bulge, so it's a line
+        assertTrue(polyIndex != -1, "LWPolyline path not found in SVG. SVG: " + svg);
+        int endOfPolyTag = svg.indexOf("/>", polyIndex);
+        String polyTag = svg.substring(polyIndex, endOfPolyTag);
+        assertTrue(polyTag.contains(expectedDashDotPattern),
+            "LWPolyline on LayerDashed (BYLAYER->DASHDOT) should have DASHDOT pattern. Found: " + polyTag);
+    }
 }
