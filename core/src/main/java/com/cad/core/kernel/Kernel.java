@@ -5,12 +5,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List; // Added import
+import java.util.ArrayList; // Added import
 
 import javax.swing.SwingUtilities; // New import
 // import com.cad.gui.MainFrame; // New import - MainFrame usage is commented out
 
 public class Kernel {
 
+    private java.util.Properties configuration = new java.util.Properties();
+    private List<String> loadedPluginNames = new ArrayList<>();
     ModuleManager moduleManager = new ModuleManager();
     
         // Método para inicializar o kernel
@@ -57,12 +61,27 @@ public class Kernel {
     public void loadConfiguration() {
         System.out.println("Starting loadConfiguration");
         // Implementação para carregar configurações específicas do CAD
+        this.configuration.setProperty("default.setting1", "value1");
+        this.configuration.setProperty("default.setting2", "value2");
+        System.out.println("Configuration loaded with default settings.");
+    }
+
+    public java.util.Properties getConfiguration() {
+        return this.configuration;
     }
 
     // Gerenciamento de plugins
     public void loadPlugins() {
         System.out.println("Loading plugins");
         // Implementação para carregar e inicializar plugins de extensão
+        // Simulate finding and loading a couple of plugins
+        this.loadedPluginNames.add("MockPluginA");
+        this.loadedPluginNames.add("MockPluginB");
+        System.out.println("Simulated loading of MockPluginA and MockPluginB.");
+    }
+
+    public List<String> getLoadedPluginNames() {
+        return this.loadedPluginNames;
     }
 
 
