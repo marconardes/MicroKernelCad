@@ -117,16 +117,25 @@ Este documento detalha o status atual de implementação das funcionalidades pla
     - [X] Estrutura para carregamento de plugins: Presente (`custom_plugin` como exemplo).
     - [ ] Documentação/API clara para desenvolvimento de plugins. (Importância: **Baixa**)
 
-**Interface Gráfica do Usuário (`gui`):** (Importância Geral: **Alta**)
+**Interface Gráfica do Usuário (`gui`):**
 - [X] Criação do Módulo `gui`: Concluído.
-- [X] Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico).
-- [X] Menu Básico: Implementado ("Arquivo" > "Sair").
-- [X] Placeholder para Área de Visualização CAD: Adicionado (JPanel vazio).
-- `[ ]` Integração da Lógica de Renderização (conectar `rendering` ao placeholder da GUI). (Importância: **Alta**)
-- `[ ]` Barra de Ferramentas com Ações CAD (Abrir, Salvar, Zoom, Pan). (Importância: **Alta**)
-- `[ ]` Painel de Propriedades de Objetos. (Importância: **Média**)
-- `[ ]` Gerenciamento de Camadas (Layers) na GUI (toggle de visibilidade). (Importância: **Média**)
-- `[ ]` Interação com o Mouse para Desenho/Seleção (foco inicial em visualização: Zoom/Pan). (Importância: **Alta**)
+- [X] Separação do Módulo `launcher`: Ponto de entrada da aplicação movido para o módulo 'launcher'.
+- [X] Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico, implementa ModuleInterface).
+- [X] Menu Básico: Implementado ("Arquivo" > "Sair", "Abrir DXF...").
+- [X] Placeholder para Área de Visualização CAD: Adicionado e funcional com renderização SVG.
+- [X] Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
+- `[ ] (P1)` **Interação com o Mouse para Desenho/Seleção:**
+    - *Detalhe:* Implementar listeners de mouse na área de visualização para: (desenho de novas entidades, seleção de entidades existentes, etc.)
+- `[ ] (P1)` **Barra de Ferramentas com Ações CAD:**
+    - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse".
+- `[ ] (P2)` **Painel de Propriedades de Objetos:**
+    - *Detalhe:* Criar um painel (ex: `JPanel` em um `JSplitPane` com a área de visualização) que exiba as propriedades da(s) entidade(s) selecionada(s) (ex: coordenadas, raio, cor, camada) e permita sua edição.
+- `[ ] (P2)` **Gerenciamento de Camadas (Layers):**
+    - *Detalhe:* Desenvolver um painel ou diálogo para listar as camadas presentes no desenho, permitindo ao usuário criar novas camadas, renomeá-las, definir sua cor, visibilidade, e a camada ativa para desenho.
+- `[ ] (P2) Refatorar MainFrame para Testabilidade Headless`
+    - *Detalhe:* Modificar `MainFrame.java` para permitir que seja instanciado e seus métodos de ciclo de vida básicos sejam testados em um ambiente headless sem lançar `HeadlessException`. Isso pode envolver a separação da lógica de UI da instanciação de componentes, permitindo mocks, ou outras técnicas para isolar a lógica da UI da renderização gráfica real durante os testes de unidade.
+- `[ ] (P2) Integrar Ciclo de Vida do Módulo GUI com Kernel via ModuleInterface`
+    - *Detalhe:* Utilizar a `ModuleInterface` implementada por `com.cad.gui.MainFrame` para que o `Kernel` (ou `ModuleManager`) possa gerenciar o ciclo de vida do módulo `gui` (chamando `init`, `start`, `stop`, `destroy`).
 
 **Melhorias Futuras Planejadas:**
 - `[ ]` Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade). (Importância: **Média/Alta** - mas após DXF)

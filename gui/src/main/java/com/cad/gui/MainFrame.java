@@ -18,20 +18,27 @@ import java.io.IOException; // Para exceções do serviço
 // Nova importação para o serviço de renderização
 import com.cad.modules.rendering.DxfRenderService;
 import com.cad.dxflib.parser.DxfParserException; // Para exceção do serviço
+import com.cad.core.api.ModuleInterface; // Added import
 
-public class MainFrame extends JFrame {
+public class MainFrame extends JFrame implements ModuleInterface {
 
     private JSVGCanvas svgCanvas;
     private DxfRenderService dxfRenderService; // Novo campo
 
     public MainFrame() {
+        // Call init to set up the frame
+        this.init();
+    }
+
+    @Override
+    public void init() {
         setTitle("CAD Tool");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        svgCanvas = new JSVGCanvas();
-        add(svgCanvas, BorderLayout.CENTER);
+        // svgCanvas = new JSVGCanvas(); // REMOVE THIS
+        // add(svgCanvas, BorderLayout.CENTER); // REMOVE THIS
 
         dxfRenderService = new DxfRenderService(); // Instanciar o serviço
 
@@ -48,6 +55,28 @@ public class MainFrame extends JFrame {
         fileMenu.add(exitMenuItem);
 
         setJMenuBar(menuBar);
+    }
+
+    @Override
+    public void start() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            ensureSvgCanvasInitialized(); // Initialize canvas before showing
+            setVisible(true);
+        });
+    }
+
+    @Override
+    public void stop() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            setVisible(false);
+        });
+    }
+
+    @Override
+    public void destroy() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            dispose();
+        });
     }
 
     private void openDxfFile() {
@@ -83,13 +112,14 @@ public class MainFrame extends JFrame {
 
     public void loadSvg(String svgContent) {
         javax.swing.SwingUtilities.invokeLater(() -> {
+            ensureSvgCanvasInitialized(); // Ensure canvas exists before using it
             if (svgContent == null || svgContent.trim().isEmpty()) {
-                svgCanvas.setSVGDocument(null); // Limpa o canvas
+                this.svgCanvas.setSVGDocument(null); // Limpa o canvas using the field
                 // Opcional: Carregar um SVG que diz "Erro" ou "Vazio"
                 // String errorSvg = "<svg width='100%' height='100%'><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='red'>Erro ao carregar SVG ou arquivo vazio.</text></svg>";
                 // try {
                 //     String svgDataUri = "data:image/svg+xml;charset=UTF-8," + java.net.URLEncoder.encode(errorSvg, "UTF-8").replace("+", "%20");
-                //     svgCanvas.setURI(svgDataUri);
+                //     this.svgCanvas.setURI(svgDataUri);
                 // } catch (java.io.UnsupportedEncodingException e) { /* ignore */ }
                 return;
             }
@@ -97,14 +127,14 @@ public class MainFrame extends JFrame {
                 // Usando setURI para contornar problemas anteriores com SAXSVGDocumentFactory
                 // O conteúdo SVG precisa ser devidamente codificado para um data URI
                 String svgDataUri = "data:image/svg+xml;charset=UTF-8," + java.net.URLEncoder.encode(svgContent, "UTF-8").replace("+", "%20");
-                svgCanvas.setURI(svgDataUri);
+                this.svgCanvas.setURI(svgDataUri);
 
             } catch (java.io.UnsupportedEncodingException e) {
                 e.printStackTrace(); // Deveria tratar isso de forma mais elegante
-                svgCanvas.setSVGDocument(null); // Limpa em caso de erro de codificação
+                this.svgCanvas.setSVGDocument(null); // Limpa em caso de erro de codificação
             } catch (Exception e) { // Catch other potential Batik exceptions from setURI
                  e.printStackTrace();
-                 svgCanvas.setSVGDocument(null); // Limpa em caso de erro
+                 this.svgCanvas.setSVGDocument(null); // Limpa em caso de erro
             }
             // Removida a referência explícita à SAXSVGDocumentFactory por enquanto
             // devido a problemas de compilação anteriores na sub-tarefa.
@@ -112,10 +142,18 @@ public class MainFrame extends JFrame {
         });
     }
 
-    public static void main(String[] args) {
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            MainFrame frame = new MainFrame();
-            frame.setVisible(true);
-        });
+    private void ensureSvgCanvasInitialized() {
+        if (this.svgCanvas == null) {
+            this.svgCanvas = new JSVGCanvas();
+            // Ensure this is happening on the EDT if called outside of SwingUtilities.invokeLater blocks,
+            // though add() itself should be EDT-safe if frame is not yet visible.
+            // For simplicity here, assuming direct call is okay as start() and loadSvg() use invokeLater.
+            add(this.svgCanvas, BorderLayout.CENTER);
+            // Revalidate/repaint might be needed if frame was already visible, but here it's pre-visibility.
+            // if (isShowing()) { // Or check visibility
+            //     revalidate();
+            //     repaint();
+            // }
+        }
     }
 }
