@@ -177,4 +177,93 @@ class DxfToSvgConverterTest {
         assertEquals(2.0, insertCircle.getYScale(), 0.001);
         assertEquals(15.0, insertCircle.getRotationAngle(), 0.001);
     }
+
+    @Test
+    void testAciColorMapping() throws DxfParserException {
+        InputStream inputStream = getResourceAsStream("/dxf/colors_aci_test.dxf");
+        DxfDocument doc = dxfParser.parse(inputStream);
+        String svg = svgConverter.convert(doc, defaultOptions);
+
+        // Line on Layer_Color_BYLAYER (layer color is ACI 10 - red #FF0000)
+        assertTrue(svg.contains("stroke=\"#FF0000\""), "Line on Layer_Color_BYLAYER should be red (#FF0000). SVG: \n" + svg);
+
+        // Circle on Layer_Color_9_Light_Grey (layer color is ACI 9 - #C0C0C0)
+        assertTrue(svg.contains("stroke=\"#C0C0C0\""), "Circle on Layer_Color_9_Light_Grey should be #C0C0C0. SVG: \n" + svg);
+
+        // Line with explicit color ACI 253 (#DFDFDF)
+        assertTrue(svg.contains("stroke=\"#DFDFDF\""), "Line with explicit color 253 should be #DFDFDF. SVG: \n" + svg);
+    }
+
+    @Test
+    void testSvgOutputWithLayerGrouping() throws DxfParserException {
+        InputStream inputStream = getResourceAsStream("/dxf/layers_simple.dxf");
+        DxfDocument doc = dxfParser.parse(inputStream);
+
+        SvgConversionOptions options = new SvgConversionOptions();
+        options.setGroupElementsByLayer(true);
+        String svg = svgConverter.convert(doc, options);
+
+        // System.out.println(svg);
+
+        assertTrue(svg.contains("<g id=\"layer_0\" class=\"layer layer_0\">"), "SVG should contain group for layer_0. SVG: \n" + svg);
+        assertTrue(svg.contains("<g id=\"layer_MyLayer1\" class=\"layer layer_MyLayer1\">"), "SVG should contain group for layer_MyLayer1. SVG: \n" + svg);
+
+        assertFalse(svg.contains("<g id=\"layer_MyLayer2_Off_Red\""), "SVG should NOT contain group for invisible layer MyLayer2_Off_Red. SVG: \n" + svg);
+    }
+
+    @Test
+    void testSvgOutputWithoutLayerGrouping() throws DxfParserException {
+        InputStream inputStream = getResourceAsStream("/dxf/layers_simple.dxf");
+        DxfDocument doc = dxfParser.parse(inputStream);
+
+        SvgConversionOptions options = new SvgConversionOptions();
+        options.setGroupElementsByLayer(false);
+        String svg = svgConverter.convert(doc, options);
+
+        assertFalse(svg.contains("<g id=\"layer_0\""), "SVG should NOT contain explicit group for layer_0 when grouping is off. SVG: \n" + svg);
+        assertFalse(svg.contains("<g id=\"layer_MyLayer1\""), "SVG should NOT contain explicit group for layer_MyLayer1 when grouping is off. SVG: \n" + svg);
+
+        // Check if entities from visible layers are present (e.g., one from Layer_Color_BYLAYER in layers_simple.dxf which is color red)
+        // This relies on an entity being on Layer_Color_BYLAYER which resolves to red.
+        // The layers_simple.dxf has entities on "0" and "MyLayer1" and "MyLayer2_Off_Red" and "MyLayer3_Locked_Blue"
+        // Let's check for an entity from layer "0" (color white/default)
+        // A specific check for an entity string might be too fragile.
+        // The goal is to confirm no <g id="layer_..."> tags.
+        // Presence of entities is implicitly tested by other tests like testConvertLineSimpleToSvg when grouping is off by default.
+    }
+
+    @Test
+    void testConvertLwPolylineWithBulgeToSvg() throws DxfParserException {
+        InputStream inputStream = getResourceAsStream("/dxf/lwpolyline_with_bulge.dxf");
+        DxfDocument doc = dxfParser.parse(inputStream);
+        String svg = svgConverter.convert(doc, defaultOptions);
+
+        assertNotNull(svg);
+        // System.out.println(svg);
+
+        // V0 (0,0) bulge 0.5  -> para V1(10,10)
+        // P1=(0,0), P2=(10,10), bulge=0.5
+        // chordLength = 14.142, includedAngle = 1.8546 rad (106.26 deg), radius = 8.839
+        // largeArcFlag = 0, sweepFlag = 1
+        String expectedArc1 = String.format(Locale.US, "A %.3f,%.3f 0 0,1 %.3f,%.3f", 8.839, 8.839, 10.0, 10.0);
+
+        // V1 (10,10) bulge 0.0 -> para V2(20,0)
+        String expectedLine1 = String.format(Locale.US, "L %.3f,%.3f", 20.0, 0.0);
+
+        // V2 (20,0) bulge -0.5 -> para V3(30,-10)
+        // P1=(20,0), P2=(30,-10), bulge=-0.5
+        // chordLength = 14.142, includedAngle = 1.8546 rad, radius = 8.839
+        // largeArcFlag = 0, sweepFlag = 0 (due to negative bulge)
+        String expectedArc2 = String.format(Locale.US, "A %.3f,%.3f 0 0,0 %.3f,%.3f", 8.839, 8.839, 30.0, -10.0);
+
+        // Path data string
+        String expectedPathData = String.format(Locale.US, "d=\"M %.3f,%.3f %s %s %s\"",
+                                                0.0, 0.0, expectedArc1, expectedLine1, expectedArc2);
+
+        assertTrue(svg.contains(expectedPathData),
+            "SVG path data for lwpolyline with bulges is not as expected.\nExpected contains: " + expectedPathData + "\nActual SVG: \n" + svg);
+
+        assertTrue(svg.contains("stroke=\"" + defaultOptions.getDefaultStrokeColor() + "\""),
+            "LWPolyline with bulges SVG color is not the default. SVG: \n" + svg);
+    }
 }

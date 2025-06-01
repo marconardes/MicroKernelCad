@@ -12,12 +12,14 @@ import com.cad.dxflib.entities.DxfLwPolyline;
 import com.cad.dxflib.entities.DxfText;
 import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfDocument;
-import com.cad.dxflib.structure.DxfLayer; // Required for parseSingleLayerEntry
-
+import com.cad.dxflib.structure.DxfLayer;
+import com.cad.dxflib.structure.DxfLinetype; // Added
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList; // Added
+import java.util.List;      // Added
 import java.util.Locale;
 
 public class DxfParser {
@@ -46,7 +48,7 @@ public class DxfParser {
                         } else if ("HEADER".equals(currentSection)) {
                             consumeSection();
                         } else if ("TABLES".equals(currentSection)) {
-                            parseTablesSection();
+                            parseTablesSection(); // Updated call
                         } else if ("BLOCKS".equals(currentSection)) {
                             parseBlocksSection();
                         } else {
@@ -118,13 +120,15 @@ public class DxfParser {
                         String tableName = aktuellenGroupCode.value.toUpperCase(Locale.ROOT);
                         if ("LAYER".equals(tableName)) {
                             parseLayerTable();
+                        } else if ("LTYPE".equals(tableName)) { // NEW CASE
+                            parseLinetypeTable();
                         } else {
                             consumeTableOrEntries();
                         }
                         if (aktuellenGroupCode == null || !(aktuellenGroupCode.code == 0 && "ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value))) {
                             throw new DxfParserException("TABLE " + tableName + " parsing did not correctly position at ENDTAB. Current: " + aktuellenGroupCode);
                         }
-                        aktuellenGroupCode = nextGroupCode(); // Consume 0/ENDTAB
+                        aktuellenGroupCode = nextGroupCode();
                     } else {
                         throw new DxfParserException("Malformed TABLE entry: expected group code 2 for table name. Got: " + aktuellenGroupCode);
                     }
@@ -184,10 +188,60 @@ public class DxfParser {
             layer.setColor(Math.abs(color));
             layer.setVisible(color >= 0);
             layer.setLinetypeName(linetype);
-            // layer.setFlags(flags); // If DxfLayer is updated to handle flags
             document.addLayer(layer);
         } else {
             throw new DxfParserException("Layer entry found with no name (group code 2). Current group: " + aktuellenGroupCode);
+        }
+    }
+
+    private void parseLinetypeTable() throws IOException, DxfParserException {
+        while((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            // Ex: group 70 (max number of entries in table)
+        }
+        while (aktuellenGroupCode != null) {
+            if (aktuellenGroupCode.code == 0) {
+                if ("ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    return;
+                } else if ("LTYPE".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    parseSingleLinetypeEntry();
+                } else {
+                    throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " in LTYPE table while expecting LTYPE or ENDTAB.");
+                }
+            } else {
+                 throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " at start of linetype entry.");
+            }
+        }
+        throw new DxfParserException("Premature EOF in LTYPE table.");
+    }
+
+    private void parseSingleLinetypeEntry() throws IOException, DxfParserException {
+        String linetypeName = null;
+        String description = "";
+        double patternLength = 0.0;
+        List<Double> patternElements = new ArrayList<>();
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                case 2: linetypeName = aktuellenGroupCode.value; break;
+                case 3: description = aktuellenGroupCode.value; break;
+                case 70: break; // Standard flags
+                case 72: break; // Alignment code (always 65)
+                case 73: break; // Number of dash length items
+                case 40: patternLength = Double.parseDouble(aktuellenGroupCode.value); break;
+                case 49: patternElements.add(Double.parseDouble(aktuellenGroupCode.value)); break;
+                default: break;
+            }
+        }
+        if (linetypeName != null && !linetypeName.isEmpty()) {
+            DxfLinetype ltype = new DxfLinetype(linetypeName);
+            ltype.setDescription(description);
+            ltype.setPatternLength(patternLength);
+            for (double element : patternElements) {
+                ltype.addPatternElement(element);
+            }
+            document.addLinetype(ltype);
+        } else {
+            throw new DxfParserException("Linetype entry found with no name (group code 2).");
         }
     }
 
@@ -224,12 +278,10 @@ public class DxfParser {
         String blockName = null;
         Point3D basePoint = new Point3D(0, 0, 0);
         DxfBlock currentBlock = null;
-        // String layerForBlockDefinition = "0"; // Layer for the BLOCK definition itself
 
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
                 case 2: blockName = aktuellenGroupCode.value; break;
-                // case 8: layerForBlockDefinition = aktuellenGroupCode.value; break; // Layer for BLOCK record
                 case 10: basePoint = new Point3D(Double.parseDouble(aktuellenGroupCode.value), basePoint.y, basePoint.z); break;
                 case 20: basePoint = new Point3D(basePoint.x, Double.parseDouble(aktuellenGroupCode.value), basePoint.z); break;
                 case 30: basePoint = new Point3D(basePoint.x, basePoint.y, Double.parseDouble(aktuellenGroupCode.value)); break;
@@ -242,9 +294,8 @@ public class DxfParser {
         }
         currentBlock = new DxfBlock(blockName);
         currentBlock.setBasePoint(basePoint);
-        // currentBlock.setLayerName(layerForBlockDefinition); // If DxfBlock needs a layer
 
-        while (aktuellenGroupCode != null) { // aktuellenGroupCode is 0/EntityType or 0/ENDBLK
+        while (aktuellenGroupCode != null) {
             if (aktuellenGroupCode.code == 0) {
                 if ("ENDBLK".equalsIgnoreCase(aktuellenGroupCode.value)) {
                     document.addBlock(currentBlock);
@@ -252,7 +303,6 @@ public class DxfParser {
                     return;
                 } else {
                     String entityType = aktuellenGroupCode.value.toUpperCase(Locale.ROOT);
-                    // Temporarily add to document, then move to block
                     int entitiesBefore = document.getModelSpaceEntities().size();
                     if ("LINE".equals(entityType)) parseLineEntity();
                     else if ("CIRCLE".equals(entityType)) parseCircleEntity();

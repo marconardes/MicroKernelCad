@@ -68,33 +68,33 @@ public class DxfToSvgConverter {
 
         svgBuilder.append("  <!-- DXF Content Start -->\n");
 
-        // Iterate through model space entities
-        if (dxfDocument.getModelSpaceEntities() != null) {
-            for (DxfEntity entity : dxfDocument.getModelSpaceEntities()) {
-                if (entity == null) continue;
+        if (options.isGroupElementsByLayer()) {
+            for (DxfLayer layer : dxfDocument.getLayers().values()) {
+                if (layer == null || !layer.isVisible()) {
+                    continue;
+                }
+                String layerId = "layer_" + layer.getName().replaceAll("[^a-zA-Z0-9_\\-]", "_");
+                svgBuilder.append(String.format(Locale.US, "  <g id=\"%s\" class=\"layer %s\">\n", layerId, layerId));
 
-                switch (entity.getType()) {
-                    case LINE:
-                        appendLineSvg((DxfLine) entity, dxfDocument, options, svgBuilder);
-                        break;
-                    case CIRCLE:
-                        appendCircleSvg((DxfCircle) entity, dxfDocument, options, svgBuilder);
-                        break;
-                    case ARC:
-                        appendArcSvg((DxfArc) entity, dxfDocument, options, svgBuilder);
-                        break;
-                    case LWPOLYLINE:
-                        appendLwPolylineSvg((DxfLwPolyline) entity, dxfDocument, options, svgBuilder);
-                        break;
-                    case TEXT:
-                        appendTextSvg((DxfText) entity, dxfDocument, options, svgBuilder);
-                        break;
-                    case INSERT:
-                        appendInsertSvg((DxfInsert) entity, dxfDocument, options, svgBuilder, 0); // Nível inicial de recursão
-                        break;
-                    default:
-                        // Skip unknown or unsupported entities for now
-                        break;
+                if (layer.getEntities() != null) {
+                    for (DxfEntity entity : layer.getEntities()) {
+                        if (entity == null) continue;
+                        appendEntityToSvg(entity, dxfDocument, options, svgBuilder, 0);
+                    }
+                }
+                svgBuilder.append("  </g> <!-- end layer ").append(layerId).append(" -->\n");
+            }
+        } else {
+            // Iterate through all entities in all visible layers if not grouping
+            for (DxfLayer layer : dxfDocument.getLayers().values()) {
+                if (layer == null || !layer.isVisible()) {
+                    continue;
+                }
+                if (layer.getEntities() != null) {
+                    for (DxfEntity entity : layer.getEntities()) {
+                        if (entity == null) continue;
+                        appendEntityToSvg(entity, dxfDocument, options, svgBuilder, 0);
+                    }
                 }
             }
         }
@@ -107,17 +107,48 @@ public class DxfToSvgConverter {
         return svgBuilder.toString();
     }
 
+    private void appendEntityToSvg(DxfEntity entity, DxfDocument document, SvgConversionOptions options,
+                               StringBuilder svgBuilder, int recursionLevel) {
+        switch (entity.getType()) {
+            case LINE:
+                appendLineSvg((DxfLine) entity, document, options, svgBuilder);
+                break;
+            case CIRCLE:
+                appendCircleSvg((DxfCircle) entity, document, options, svgBuilder);
+                break;
+            case ARC:
+                appendArcSvg((DxfArc) entity, document, options, svgBuilder);
+                break;
+            case LWPOLYLINE:
+                appendLwPolylineSvg((DxfLwPolyline) entity, document, options, svgBuilder);
+                break;
+            case TEXT:
+                appendTextSvg((DxfText) entity, document, options, svgBuilder);
+                break;
+            case INSERT:
+                appendInsertSvg((DxfInsert) entity, document, options, svgBuilder, recursionLevel);
+                break;
+            default:
+                break;
+        }
+    }
+
     private String getDxfColorAsSvg(int dxfColorIndex, DxfDocument document, String layerName, SvgConversionOptions options) {
-        if (dxfColorIndex == 0) { // BYBLOCK
-            dxfColorIndex = 256;
+        int resolvedColorIndex = dxfColorIndex;
+
+        if (resolvedColorIndex == 0) { // BYBLOCK
+            resolvedColorIndex = 256;
         }
 
-        if (dxfColorIndex == 256) { // BYLAYER
+        if (resolvedColorIndex == 256) { // BYLAYER
             if (layerName != null && document != null) {
                 DxfLayer layer = document.getLayer(layerName);
                 if (layer != null) {
-                    dxfColorIndex = layer.getColor();
-                    if (dxfColorIndex < 0) dxfColorIndex = Math.abs(dxfColorIndex);
+                    resolvedColorIndex = layer.getColor();
+                    if (resolvedColorIndex < 0) resolvedColorIndex = Math.abs(resolvedColorIndex);
+                    if (resolvedColorIndex == 0 || resolvedColorIndex == 256) {
+                        return options.getDefaultStrokeColor();
+                    }
                 } else {
                     return options.getDefaultStrokeColor();
                 }
@@ -126,16 +157,30 @@ public class DxfToSvgConverter {
             }
         }
 
-        switch (dxfColorIndex) {
+        switch (resolvedColorIndex) {
             case 1: return "red";
             case 2: return "yellow";
             case 3: return "green";
             case 4: return "cyan";
             case 5: return "blue";
             case 6: return "magenta";
-            case 7: return "white";
-            case 8: return "gray";
-            case 9: return "lightgray";
+            case 7: return options.getDefaultStrokeColor();
+            case 8: return "#808080"; // Dark Grey
+            case 9: return "#C0C0C0"; // Light Grey (Silver)
+            case 10: return "#FF0000"; // Red
+            case 11: return "#FF3F3F";
+            case 12: return "#FF7F7F";
+            case 30: return "#00FF00"; // Green
+            case 40: return "#00FFFF"; // Cyan
+            case 50: return "#0000FF"; // Blue
+            case 60: return "#FF00FF"; // Magenta
+            case 14: return "darkcyan";
+            case 250: return "#2F2F2F";
+            case 251: return "#4C4C4C";
+            case 252: return "#7F7F7F";
+            case 253: return "#B2B2B2";
+            case 254: return "#DFDFDF";
+            case 255: return "#F0F0F0";
             default:
                 return options.getDefaultStrokeColor();
         }
@@ -216,18 +261,87 @@ public class DxfToSvgConverter {
             Point2D p2 = vertices.get(i + 1);
             double bulge = (i < bulges.size()) ? bulges.get(i) : 0.0;
 
-            if (bulge == 0.0) {
+            if (bulge == 0.0) { // Straight line segment
                 pathData.append(String.format(Locale.US, " L %.3f,%.3f", p2.x, p2.y));
-            } else {
-                // TODO: Implement full bulge to SVG arc conversion.
-                pathData.append(String.format(Locale.US, " L %.3f,%.3f", p2.x, p2.y));
+            } else { // Arc segment
+                double dx = p2.x - p1.x;
+                double dy = p2.y - p1.y;
+                double chordLength = Math.sqrt(dx * dx + dy * dy);
+
+                if (chordLength < 1e-9) {
+                    pathData.append(String.format(Locale.US, " L %.3f,%.3f", p2.x, p2.y));
+                } else {
+                    double includedAngle = 4 * Math.atan(Math.abs(bulge));
+                    double radius;
+                    if (Math.abs(Math.sin(includedAngle / 2.0)) < 1e-9) {
+                        radius = Double.POSITIVE_INFINITY;
+                    } else {
+                         radius = Math.abs( (chordLength / 2.0) / Math.sin(includedAngle / 2.0) );
+                    }
+
+                    if (Double.isInfinite(radius) || Double.isNaN(radius) || radius < 1e-9) {
+                        pathData.append(String.format(Locale.US, " L %.3f,%.3f", p2.x, p2.y));
+                    } else {
+                        int largeArcFlag = (includedAngle > Math.PI) ? 1 : 0;
+                        int sweepFlag = (bulge > 0) ? 1 : 0;
+
+                        pathData.append(String.format(Locale.US,
+                                " A %.3f,%.3f 0 %d,%d %.3f,%.3f",
+                                radius, radius,
+                                largeArcFlag,
+                                sweepFlag,
+                                p2.x, p2.y));
+                    }
+                }
             }
         }
 
         if (lwpoly.isClosed()) {
-            if ((vertices.size() -1) >= bulges.size() || bulges.get(vertices.size()-1) == 0.0 ) {
-                 pathData.append(" Z");
-            } else {
+            // For a closed polyline, the last segment connects the last vertex to the first.
+            // We need to check if there was a bulge specified for this closing segment.
+            // DXF stores bulge on the *starting* vertex of an arc segment.
+            // So, the bulge for the segment from last_vertex to first_vertex would be on the last_vertex.
+            if (vertices.size() > 1) { // Only makes sense if there's more than one vertex
+                double closingBulge = (vertices.size() -1 < bulges.size()) ? bulges.get(vertices.size()-1) : 0.0;
+                if (closingBulge == 0.0) {
+                    pathData.append(" Z"); // Simple close if no bulge on closing segment
+                } else {
+                    // Arc for the closing segment
+                    Point2D p_last = vertices.get(vertices.size() - 1);
+                    Point2D p_first = vertices.get(0);
+                    double dx = p_first.x - p_last.x;
+                    double dy = p_first.y - p_last.y;
+                    double chordLength = Math.sqrt(dx*dx + dy*dy);
+
+                    if (chordLength < 1e-9) {
+                        pathData.append(" Z"); // Points are same, just close
+                    } else {
+                        double includedAngle = 4 * Math.atan(Math.abs(closingBulge));
+                        double radius;
+                        if (Math.abs(Math.sin(includedAngle / 2.0)) < 1e-9) {
+                             radius = Double.POSITIVE_INFINITY;
+                        } else {
+                            radius = Math.abs( (chordLength / 2.0) / Math.sin(includedAngle / 2.0) );
+                        }
+
+                        if (Double.isInfinite(radius) || Double.isNaN(radius) || radius < 1e-9) {
+                            pathData.append(" Z"); // Cannot form arc, just close
+                        } else {
+                            int largeArcFlag = (includedAngle > Math.PI) ? 1 : 0;
+                            int sweepFlag = (closingBulge > 0) ? 1 : 0;
+                            pathData.append(String.format(Locale.US,
+                                    " A %.3f,%.3f 0 %d,%d %.3f,%.3f",
+                                    radius, radius,
+                                    largeArcFlag, sweepFlag,
+                                    p_first.x, p_first.y));
+                            // No explicit Z needed here as the arc command itself moves to the start point.
+                            // However, some SVG renderers might behave better with an explicit Z if the path isn't auto-closed by fill.
+                            // Since fill="none", an explicit Z might be better if the arc doesn't perfectly land.
+                            // But for a path that is stroked, an arc to the start point is sufficient.
+                        }
+                    }
+                }
+            } else { // Single point polyline, or empty - just Z if closed (though M already at P0)
                  pathData.append(" Z");
             }
         }
@@ -300,22 +414,15 @@ public class DxfToSvgConverter {
         double yScale = insert.getYScale();
         double rotation = insert.getRotationAngle();
 
-        // Store current length of svgBuilder to clear it if we only write the group tag
-        int openingGTagStart = svgBuilder.length();
         svgBuilder.append("  <g transform=\"");
-        boolean transformApplied = false;
 
-        // Apply transformations in order: translate to insertion point, rotate, scale, translate by negative block base
         svgBuilder.append(String.format(Locale.US, "translate(%.3f, %.3f)", insertPt.x, insertPt.y));
-        transformApplied = true;
-
         if (rotation != 0.0) {
             svgBuilder.append(String.format(Locale.US, " rotate(%.3f)", -rotation));
         }
         if (xScale != 1.0 || yScale != 1.0) {
             svgBuilder.append(String.format(Locale.US, " scale(%.3f, %.3f)", xScale, yScale));
         }
-
         Point3D blockBase = block.getBasePoint();
         if (blockBase.x != 0.0 || blockBase.y != 0.0) {
              svgBuilder.append(String.format(Locale.US, " translate(%.3f, %.3f)", -blockBase.x, -blockBase.y));
@@ -346,15 +453,8 @@ public class DxfToSvgConverter {
                 }
             }
 
-            switch (entityInBlock.getType()) {
-                case LINE: appendLineSvg((DxfLine) entityInBlock, document, options, svgBuilder); break;
-                case CIRCLE: appendCircleSvg((DxfCircle) entityInBlock, document, options, svgBuilder); break;
-                case ARC: appendArcSvg((DxfArc) entityInBlock, document, options, svgBuilder); break;
-                case LWPOLYLINE: appendLwPolylineSvg((DxfLwPolyline) entityInBlock, document, options, svgBuilder); break;
-                case TEXT: appendTextSvg((DxfText) entityInBlock, document, options, svgBuilder); break;
-                case INSERT: appendInsertSvg((DxfInsert) entityInBlock, document, options, svgBuilder, recursionLevel + 1); break;
-                default: break;
-            }
+            // Use the centralized dispatcher
+            appendEntityToSvg(entityInBlock, document, options, svgBuilder, recursionLevel + 1);
 
             if (changedLayer) entityInBlock.setLayerName(originalEntityLayer);
             if (changedColor) entityInBlock.setColor(originalEntityColor);
