@@ -18,7 +18,7 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 *Módulo de Renderização (`rendering`):*
 - [ ] Capacidade de renderizar modelos 2D (foco inicial em formato DXF).
 - [ ] Capacidade de renderizar modelos 3D.
-- [ ] Integração com a área de visualização da GUI (para renderização DXF).
+- [ ] Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
 *Módulo de Física (`physics`):*
 - [ ] Implementação de simulações físicas.
 *Módulo de Exportação (`export`):*
@@ -39,6 +39,18 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [ ] Painel de Propriedades de Objetos: Pendente.
 - [ ] Gerenciamento de Camadas (Layers): Pendente.
 - [ ] Interação com o Mouse para Desenho/Seleção: Pendente.
+
+## Módulo Leitor DXF (dxflib)
+- [X] Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
+- [X] Análise de Referência (Kabeja - conceitual)
+- [X] Criação da Estrutura do Módulo `dxflib` (POM, pacotes)
+- [X] Implementação das Estruturas de Dados Base (DxfDocument, DxfEntity, Point2D/3D, etc.)
+- [X] Implementação do Parser para Entidades DXF Iniciais (LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, INSERT)
+- [X] Adição de Testes Unitários para Entidades Iniciais
+- [ ] Implementação da Leitura de Tabelas (LAYER) e Seção de Blocos (BLOCK)
+- [ ] Adição de Testes Unitários para Layers e Blocos
+- [ ] Implementação do Conversor DXF para SVG (para entidades parseadas)
+- [ ] Adição de Testes Unitários para o Conversor SVG
 
 ## Melhorias Futuras Planejadas
 - [ ] Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).
