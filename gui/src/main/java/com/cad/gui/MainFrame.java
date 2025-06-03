@@ -5,6 +5,8 @@ import java.awt.BorderLayout;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JToolBar; // Added for JToolBar
+import javax.swing.JButton;  // Added for JButton
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane; // Para mostrar erros
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -14,6 +16,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException; // Para exceções do serviço
+import java.awt.event.MouseAdapter; // Added for mouse events
+import java.awt.event.MouseEvent;   // Added for mouse events
+import java.awt.event.MouseMotionListener; // Added for mouse motion events
 
 // Nova importação para o serviço de renderização
 import com.cad.modules.rendering.DxfRenderService;
@@ -55,6 +60,42 @@ public class MainFrame extends JFrame implements ModuleInterface {
         fileMenu.add(exitMenuItem);
 
         setJMenuBar(menuBar);
+
+        JToolBar toolBar = new JToolBar();
+        toolBar.setFloatable(false); // Opcional: para não permitir que a barra seja movida
+
+        JButton lineButton = new JButton("Linha");
+        lineButton.setToolTipText("Desenhar Linha (Não implementado)");
+        // Adicionar ActionListener placeholder se desejar, e.g.:
+        // lineButton.addActionListener(e -> System.out.println("Botão Linha clicado"));
+        toolBar.add(lineButton);
+
+        JButton circleButton = new JButton("Círculo");
+        circleButton.setToolTipText("Desenhar Círculo (Não implementado)");
+        toolBar.add(circleButton);
+
+        toolBar.addSeparator(); // Adiciona um separador visual
+
+        JButton selectButton = new JButton("Selecionar");
+        selectButton.setToolTipText("Selecionar Entidade (Não implementado)");
+        toolBar.add(selectButton);
+
+        toolBar.addSeparator();
+
+        JButton zoomInButton = new JButton("Zoom In");
+        zoomInButton.setToolTipText("Aumentar Zoom (Não implementado)");
+        toolBar.add(zoomInButton);
+
+        JButton zoomOutButton = new JButton("Zoom Out");
+        zoomOutButton.setToolTipText("Diminuir Zoom (Não implementado)");
+        toolBar.add(zoomOutButton);
+
+        JButton panButton = new JButton("Pan");
+        panButton.setToolTipText("Mover Visualização (Não implementado)");
+        toolBar.add(panButton);
+
+        // Adiciona a toolbar ao JFrame. BorderLayout.PAGE_START é uma boa posição.
+        add(toolBar, BorderLayout.PAGE_START);
     }
 
     @Override
@@ -154,6 +195,38 @@ public class MainFrame extends JFrame implements ModuleInterface {
             //     revalidate();
             //     repaint();
             // }
+
+            // Adicionar listeners de mouse
+            MouseAdapter mouseListener = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    System.out.println("Mouse Pressed at: " + e.getX() + ", " + e.getY());
+                    // Futuramente: Iniciar uma operação de desenho ou seleção
+                }
+
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    System.out.println("Mouse Clicked at: " + e.getX() + ", " + e.getY());
+                    // Futuramente: Finalizar uma seleção ou um ponto de um desenho
+                }
+            };
+
+            MouseMotionListener motionListener = new MouseMotionListener() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    System.out.println("Mouse Dragged to: " + e.getX() + ", " + e.getY());
+                    // Futuramente: Atualizar a pré-visualização de uma forma sendo desenhada
+                }
+
+                @Override
+                public void mouseMoved(MouseEvent e) {
+                    // System.out.println("Mouse Moved to: " + e.getX() + ", " + e.getY());
+                    // Comentado para não poluir muito o console, mas útil para depuração
+                }
+            };
+
+            this.svgCanvas.addMouseListener(mouseListener);
+            this.svgCanvas.addMouseMotionListener(motionListener);
         }
     }
 }
