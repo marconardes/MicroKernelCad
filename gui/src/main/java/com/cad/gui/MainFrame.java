@@ -381,10 +381,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
                             circleCenterPoint = null; // Reset para o próximo círculo
                             removePreviewCircle(); // Limpar a pré-visualização final
                         }
-                    } else {
-                        // Comportamento para outras ferramentas ou nenhuma ferramenta
-                        removePreviewCircle(); // Adicionado para limpar preview de círculo
-                        System.out.println("Mouse Pressed (Ferramenta: " + toolManager.getActiveTool() + ") at: " + e.getX() + ", " + e.getY());
                     } else if (toolManager.getActiveTool() == ActiveTool.SELECT) {
                         selectedEntity = null; // Desselecionar ao clicar novamente
                         Point2D clickPoint = new Point2D(e.getX(), e.getY());
@@ -439,6 +435,11 @@ public class MainFrame extends JFrame implements ModuleInterface {
                         if (svgCanvas == null) return;
                         panLastMousePosition = new Point2D(e.getX(), e.getY());
                         System.out.println("Pan iniciado em: " + panLastMousePosition.x + ", " + panLastMousePosition.y);
+                    } else {
+                        // Comportamento para outras ferramentas ou nenhuma ferramenta
+                        removePreviewLine();
+                        removePreviewCircle();
+                        System.out.println("Mouse Pressed (Ferramenta Padrão/Nenhuma: " + toolManager.getActiveTool() + ") at: " + e.getX() + ", " + e.getY());
                     }
                 }
 
@@ -512,10 +513,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
                             }
                         }
                         previewCircleSvgElement.setAttributeNS(null, "r", String.valueOf(currentRadius));
-                    } else {
-                        // Se nenhuma ferramenta de desenho específica estiver manipulando o drag, remove as pré-visualizações.
-                        removePreviewLine();
-                        removePreviewCircle();
                     } else if (toolManager.getActiveTool() == ActiveTool.PAN && panLastMousePosition != null) {
                         if (svgCanvas == null) return;
                         removePreviewLine();
@@ -530,6 +527,10 @@ public class MainFrame extends JFrame implements ModuleInterface {
                         svgCanvas.setRenderingTransform(at);
 
                         panLastMousePosition = new Point2D(e.getX(), e.getY());
+                    } else {
+                        // Se nenhuma ferramenta de desenho/pan específica estiver manipulando o drag, remove as pré-visualizações.
+                        removePreviewLine();
+                        removePreviewCircle();
                     }
                 }
 
