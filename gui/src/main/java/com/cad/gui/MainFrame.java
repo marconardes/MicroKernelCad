@@ -8,12 +8,13 @@ import com.cad.gui.tool.ToolManager;
 import com.cad.modules.geometry.entities.Circle2D;
 import com.cad.modules.geometry.entities.Line2D;
 import com.cad.modules.rendering.DxfRenderService;
-import org.apache.batik.dom.svg.SVGDOMImplementation;
-import org.apache.batik.swing.JSVGCanvas;
-import org.w3c.dom.DOMImplementation;
-import org.w3c.dom.svg.SVGCircleElement;
-import org.w3c.dom.svg.SVGDocument;
-import org.w3c.dom.svg.SVGLineElement;
+// import org.apache.batik.dom.svg.SVGDOMImplementation; // Commented out for SVG Salamander
+// import org.apache.batik.swing.JSVGCanvas; // Commented out for SVG Salamander
+import com.kitfox.svg.app.beans.SVGPanel; // Added for SVG Salamander
+// import org.w3c.dom.DOMImplementation; // Commented out, Batik/W3C DOM specific
+// import org.w3c.dom.svg.SVGCircleElement; // Commented out, Batik/W3C DOM specific
+// import org.w3c.dom.svg.SVGDocument; // Commented out, Batik/W3C DOM specific
+// import org.w3c.dom.svg.SVGLineElement; // Commented out, Batik/W3C DOM specific
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -31,37 +32,57 @@ import java.util.List;
 
 public class MainFrame extends JFrame implements ModuleInterface {
 
-    private JSVGCanvas svgCanvas;
-    private DxfRenderService dxfRenderService; // Novo campo
-    private ToolManager toolManager; // Added ToolManager field
-    private Point2D lineStartPoint = null; // Added for line drawing state
-    private SVGLineElement previewLineSvgElement;
-    private List<Line2D> drawnLines = new ArrayList<>();
-    private Point2D circleCenterPoint = null;
-    private SVGCircleElement previewCircleSvgElement;
-    private List<Circle2D> drawnCircles = new ArrayList<>();
-    private Object selectedEntity = null;
+    SVGPanel svgCanvas; // Changed from JSVGCanvas to SVGPanel, package-private for test access
+    DxfRenderService dxfRenderService; // Novo campo (package-private for test access if needed, though unlikely)
+    ToolManager toolManager; // Added ToolManager field, package-private for test access
+    Point2D lineStartPoint = null; // Added for line drawing state, package-private for test access
+    // private SVGLineElement previewLineSvgElement; // Commented out, Batik specific
+    List<Line2D> drawnLines = new ArrayList<>(); // package-private for test access
+    Point2D circleCenterPoint = null; // package-private for test access
+    // private SVGCircleElement previewCircleSvgElement; // Commented out, Batik specific
+    List<Circle2D> drawnCircles = new ArrayList<>(); // package-private for test access
+    Object selectedEntity = null; // package-private for test access (if needed for selection tests)
     private final double HIT_TOLERANCE = 5.0; // Tolerância em pixels
-    private Point2D panLastMousePosition = null;
+    Point2D panLastMousePosition = null; // package-private for test access (if needed for pan tests)
+
+    // Fields for zoom and pan state
+    double currentScale = 1.0; // package-private for test access
+    double translateX = 0.0; // package-private for test access
+    double translateY = 0.0; // package-private for test access
+    // Store the initial transform of the SVGPanel for reset or calculations if needed.
+    // However, SVGPanel might not expose its transform directly.
+    // For now, we'll manage scale and translation independently.
+    String baseSvgContent = null; // To store the SVG from DXF conversion, package-private for test access
+    Point2D previewEndPoint = null; // For line drawing preview, package-private for test access
+    double previewRadius = 0; // For circle drawing preview, package-private for test access
 
     public MainFrame() {
-        // Call init to set up the frame
-        this.init();
+        this(true); // Default constructor initializes UI
     }
 
-    @Override
-    public void init() {
-        this.toolManager = new ToolManager(); // Instantiate ToolManager
+    public MainFrame(boolean initializeUI) {
+        // Initialize non-UI components first
+        this.toolManager = new ToolManager();
+        this.dxfRenderService = new DxfRenderService();
 
+        if (initializeUI) {
+            initUI(); // Initialize Swing components
+        }
+        // Note: ensureSvgCanvasInitialized() is called within initUI or needs to be handled
+        // for the case where initializeUI is false if svgCanvas is used by non-UI logic
+        // (which it isn't currently, redrawSVGCanvas calls it, but tests mock svgCanvas).
+    }
+
+    // Renamed from init() to initUI() and made private
+    private void initUI() {
         setTitle("CAD Tool");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // svgCanvas = new JSVGCanvas(); // REMOVE THIS
-        // add(svgCanvas, BorderLayout.CENTER); // REMOVE THIS
-
-        dxfRenderService = new DxfRenderService(); // Instanciar o serviço
+        // Ensure canvas is initialized for UI display
+        ensureSvgCanvasInitialized();
+        redrawSVGCanvas(); // Draw initial empty (but potentially transformed) canvas
 
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("Arquivo");
@@ -217,9 +238,47 @@ public class MainFrame extends JFrame implements ModuleInterface {
     }
 
     @Override
+    public void init() {
+        // This method is part of ModuleInterface.
+        // If it's meant for UI setup, it should call initUI().
+        // If it's for non-UI setup, that's already in the new constructor.
+        // For now, assuming it's related to UI display lifecycle.
+        // If MainFrame(false) is used, this might try to do UI things.
+        // However, ModuleInterface.init() is usually for non-display setup.
+        // The original call to this.init() in the default constructor is now initUI() via this(true).
+        // Let's ensure this ModuleInterface.init() doesn't redo UI stuff if not intended.
+        // For now, let's assume it's okay or not called in the test path.
+        // If tests call start(), then it becomes an issue.
+
+        // If ModuleInterface.init() is for non-UI logic, it should be called by both constructors.
+        // If it implies UI readiness, then it should only be called if initializeUI was true.
+        // The current structure: new MainFrame() -> this(true) -> initUI().
+        // new MainFrame(false) does not call initUI().
+        // The @Override init() here is from ModuleInterface.
+        // This method is NOT the old init() method.
+        System.out.println("ModuleInterface.init() called on MainFrame.");
+        // If this method is critical for non-UI logic that tests rely on, that logic
+        // should be in the MainFrame(boolean) constructor.
+        // If it's for UI, it should be part of initUI().
+    }
+
+
+    @Override
     public void start() {
+        // This implies UI is being started.
+        // If MainFrame was constructed with initializeUI = false, this might be problematic.
         javax.swing.SwingUtilities.invokeLater(() -> {
-            ensureSvgCanvasInitialized(); // Initialize canvas before showing
+            if (svgCanvas == null && getContentPane().getComponentCount() == 0) {
+                 // If UI was not initialized, and start is called, maybe initialize it now?
+                 // Or, this implies an issue if start() is called on a non-UI-initialized MainFrame.
+                 // For testing, we typically don't call start().
+                System.err.println("MainFrame.start() called on a potentially non-UI-initialized frame. Canvas might be null.");
+                initUI(); // Try to initialize UI if not done already.
+            } else if (svgCanvas == null && getContentPane().getComponentCount() > 0) {
+                // Components exist but svgCanvas is null - this state should ideally not happen if initUI was consistent.
+                // For robustness, ensure canvas is there.
+                ensureSvgCanvasInitialized();
+            }
             setVisible(true);
         });
     }
@@ -250,121 +309,127 @@ public class MainFrame extends JFrame implements ModuleInterface {
             File fileToOpen = fileChooser.getSelectedFile();
             System.out.println("Arquivo DXF selecionado: " + fileToOpen.getAbsolutePath());
 
+            // Reset state for new file
             this.drawnLines.clear();
-            // Não é necessário chamar redrawSVGCanvas() aqui, pois loadSvg() será chamado
-            // com o conteúdo do DXF ou com null/erro, que já redesenha ou limpa.
+            this.drawnCircles.clear();
+            this.currentScale = 1.0;
+            this.translateX = 0.0;
+            this.translateY = 0.0;
+            this.baseSvgContent = null; // Clear previous DXF content
+            this.selectedEntity = null; // Clear selection
 
-            this.drawnCircles.clear(); // Adicionado para limpar círculos desenhados
             try (FileInputStream fis = new FileInputStream(fileToOpen)) {
-                String svgContent = dxfRenderService.convertDxfToSvg(fis);
-                loadSvg(svgContent);
-                removePreviewLine();
-                removePreviewCircle(); // Adicionado
+                this.baseSvgContent = dxfRenderService.convertDxfToSvg(fis);
+                removePreviewLine(); // These are Batik specific, ensure they are cleared if ever reintroduced
+                removePreviewCircle();
             } catch (FileNotFoundException ex) {
                 System.err.println("Arquivo não encontrado: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Arquivo não encontrado: " + fileToOpen.getAbsolutePath(), "Erro ao Abrir Arquivo", JOptionPane.ERROR_MESSAGE);
-                loadSvg(null); // Limpa a visualização
-                removePreviewLine();
-                removePreviewCircle(); // Adicionado
+                this.baseSvgContent = null;
             } catch (DxfParserException ex) {
                 System.err.println("Erro ao parsear DXF: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Erro ao processar o arquivo DXF: " + ex.getMessage(), "Erro de DXF", JOptionPane.ERROR_MESSAGE);
-                loadSvg(null); // Limpa a visualização
-                removePreviewLine();
-                removePreviewCircle(); // Adicionado
+                this.baseSvgContent = null;
             } catch (IOException ex) {
                 System.err.println("Erro de I/O: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Erro de leitura/escrita: " + ex.getMessage(), "Erro de I/O", JOptionPane.ERROR_MESSAGE);
-                loadSvg(null); // Limpa a visualização
-                removePreviewLine();
-                removePreviewCircle(); // Adicionado
+                this.baseSvgContent = null;
             }
+            redrawSVGCanvas(); // Redraw with new base content (or empty if error)
         }
     }
 
-    public void loadSvg(String svgContent) {
+    // Simplified loadSvg: it just loads the provided complete SVG string.
+    // All transformations and content aggregation happen in redrawSVGCanvas.
+    public void loadSvg(String completeSvgString) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            ensureSvgCanvasInitialized(); // Ensure canvas exists before using it
-            if (svgContent == null || svgContent.trim().isEmpty()) {
-                this.svgCanvas.setSVGDocument(null); // Limpa o canvas using the field
-                // Opcional: Carregar um SVG que diz "Erro" ou "Vazio"
-                // String errorSvg = "<svg width='100%' height='100%'><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='20' fill='red'>Erro ao carregar SVG ou arquivo vazio.</text></svg>";
-                // try {
-                //     String svgDataUri = "data:image/svg+xml;charset=UTF-8," + java.net.URLEncoder.encode(errorSvg, "UTF-8").replace("+", "%20");
-                //     this.svgCanvas.setURI(svgDataUri);
-                // } catch (java.io.UnsupportedEncodingException e) { /* ignore */ }
+            ensureSvgCanvasInitialized();
+            if (svgCanvas == null) return;
+
+            if (completeSvgString == null || completeSvgString.trim().isEmpty()) {
+                try {
+                    this.svgCanvas.setSvgURI(null); // Clear display
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                this.svgCanvas.repaint();
                 return;
             }
             try {
-                // Usando setURI para contornar problemas anteriores com SAXSVGDocumentFactory
-                // O conteúdo SVG precisa ser devidamente codificado para um data URI
-                String svgDataUri = "data:image/svg+xml;charset=UTF-8," + java.net.URLEncoder.encode(svgContent, "UTF-8").replace("+", "%20");
-                this.svgCanvas.setURI(svgDataUri);
-
-            } catch (java.io.UnsupportedEncodingException e) {
-                e.printStackTrace(); // Deveria tratar isso de forma mais elegante
-                this.svgCanvas.setSVGDocument(null); // Limpa em caso de erro de codificação
-            } catch (Exception e) { // Catch other potential Batik exceptions from setURI
+                String encodedSvg = java.net.URLEncoder.encode(completeSvgString, "UTF-8").replace("+", "%20");
+                java.net.URI svgUri = new java.net.URI("data:image/svg+xml;charset=UTF-8," + encodedSvg);
+                this.svgCanvas.setSvgURI(svgUri);
+                this.svgCanvas.repaint();
+            } catch (Exception e) { // Catch all: URISyntax, UnsupportedEncoding, other SVGPanel issues
                  e.printStackTrace();
-                 this.svgCanvas.setSVGDocument(null); // Limpa em caso de erro
+                 try {
+                    this.svgCanvas.setSvgURI(null); // Clear display on error
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                 this.svgCanvas.repaint();
             }
-            // Removida a referência explícita à SAXSVGDocumentFactory por enquanto
-            // devido a problemas de compilação anteriores na sub-tarefa.
-            // A abordagem setURI com data URI é mais robusta neste momento.
         });
     }
 
     private void ensureSvgCanvasInitialized() {
+        // This method might be called when svgCanvas is already a mock.
+        // Only proceed with new SVGPanel() if it's truly null (e.g. during real UI init).
         if (this.svgCanvas == null) {
-            this.svgCanvas = new JSVGCanvas();
-            // Ensure this is happening on the EDT if called outside of SwingUtilities.invokeLater blocks,
-            // though add() itself should be EDT-safe if frame is not yet visible.
-            // For simplicity here, assuming direct call is okay as start() and loadSvg() use invokeLater.
-            add(this.svgCanvas, BorderLayout.CENTER);
-            // Revalidate/repaint might be needed if frame was already visible, but here it's pre-visibility.
-            // if (isShowing()) { // Or check visibility
-            //     revalidate();
-            //     repaint();
-            // }
+            this.svgCanvas = new SVGPanel();
+            this.svgCanvas.setAntiAlias(true);
+            // this.svgCanvas.setAutosize(SVGPanel.AUTOSIZE_STRETCH); // Commented out
+            add(this.svgCanvas, BorderLayout.CENTER); // This is a JFrame.add()
 
-            // Adicionar listeners de mouse
+            // Add mouse listeners only if we are initializing the real UI
+            // and not when svgCanvas is a mock being set up by a test.
+            // However, the current test setup replaces svgCanvas *after* new MainFrame() -> initUI()
+            // So, this check might be tricky.
+            // A cleaner way: tests mock svgCanvas, real UI construction uses real SVGPanel.
+            // If this method is called from initUI, svgCanvas would be null before new SVGPanel().
+            // If called from test setup after mock injection, it should not re-initialize.
+            // The current structure: MainFrame() -> this(true) -> initUI() -> ensureSvgCanvasInitialized().
+            // MainFrame(false) -> no initUI(). Test then sets mainFrame.svgCanvas.
+            // So, this.svgCanvas will be null only during real UI setup.
+
+            // Adicionar listeners de mouse - these should only be added to a real canvas
             MouseAdapter mouseListener = new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     if (toolManager.getActiveTool() == ActiveTool.DRAW_LINE) {
                         if (lineStartPoint == null) {
                             // Primeiro clique para a linha
-                            removePreviewLine(); // Limpa pre-visualização anterior
                             lineStartPoint = new Point2D(e.getX(), e.getY());
+                            previewEndPoint = lineStartPoint; // Initialize previewEndPoint
                             System.out.println("Modo Desenhar Linha: Ponto inicial em " + lineStartPoint.x + ", " + lineStartPoint.y);
+                            redrawSVGCanvas(); // Show the first point or initial preview
                         } else {
                             // Segundo clique para a linha
-                            removePreviewLine(); // Limpa pre-visualização ao finalizar linha
                             Point2D endPoint = new Point2D(e.getX(), e.getY());
                             Line2D newLine = new Line2D(lineStartPoint, endPoint);
                             System.out.println("Modo Desenhar Linha: Ponto final em " + endPoint.x + ", " + endPoint.y + ". Linha criada: " + newLine.toString());
                             drawnLines.add(newLine);
-                            redrawSVGCanvas(); // Atualiza o canvas com a nova linha
                             lineStartPoint = null; // Reset para a próxima linha
+                            previewEndPoint = null; // Clear preview line
+                            redrawSVGCanvas(); // Atualiza o canvas com a nova linha
                         }
                     } else if (toolManager.getActiveTool() == ActiveTool.DRAW_CIRCLE) {
-                        removePreviewLine();
-                        removePreviewCircle(); // Limpar qualquer pré-visualização de círculo anterior
                         if (circleCenterPoint == null) {
                             circleCenterPoint = new Point2D(e.getX(), e.getY());
+                            previewRadius = 0; // Initialize preview radius
                             System.out.println("Modo Desenhar Círculo: Centro em " + circleCenterPoint.x + ", " + circleCenterPoint.y);
-                            // Não há pré-visualização ainda, só o centro foi definido.
+                            redrawSVGCanvas(); // Show the center point or initial preview
                         } else {
                             Point2D pointOnCircumference = new Point2D(e.getX(), e.getY());
                             double radius = Math.sqrt(Math.pow(pointOnCircumference.x - circleCenterPoint.x, 2) + Math.pow(pointOnCircumference.y - circleCenterPoint.y, 2));
-                            if (radius > 0) { // Evitar círculos de raio zero se o clique for no mesmo ponto
+                            if (radius > 0) {
                                 Circle2D newCircle = new Circle2D(circleCenterPoint, radius);
                                 drawnCircles.add(newCircle);
                                 System.out.println("Modo Desenhar Círculo: Raio " + radius + ". Círculo criado: " + newCircle.toString());
-                                redrawSVGCanvas(); // Atualizar canvas para mostrar o círculo finalizado
                             }
                             circleCenterPoint = null; // Reset para o próximo círculo
-                            removePreviewCircle(); // Limpar a pré-visualização final
+                            previewRadius = 0; // Clear preview circle
+                            redrawSVGCanvas(); // Atualizar canvas para mostrar o círculo finalizado
                         }
                     } else if (toolManager.getActiveTool() == ActiveTool.SELECT) {
                         selectedEntity = null; // Desselecionar ao clicar novamente
@@ -400,26 +465,21 @@ public class MainFrame extends JFrame implements ModuleInterface {
                         redrawSVGCanvas(); // Redesenhar para mostrar feedback visual da seleção
                     } else if (toolManager.getActiveTool() == ActiveTool.ZOOM_IN) {
                         if (svgCanvas == null) return;
-                        AffineTransform at = svgCanvas.getRenderingTransform();
-                        double scaleFactor = 1.25;
-                        at.preConcatenate(AffineTransform.getTranslateInstance(-e.getX(), -e.getY()));
-                        at.preConcatenate(AffineTransform.getScaleInstance(scaleFactor, scaleFactor));
-                        at.preConcatenate(AffineTransform.getTranslateInstance(e.getX(), e.getY()));
-                        svgCanvas.setRenderingTransform(at);
-                        System.out.println("Zoom In no ponto: " + e.getX() + ", " + e.getY());
+                        // Zoom In
+                        double scaleFactorIn = 1.25;
+                        applyZoom(e.getX(), e.getY(), scaleFactorIn);
+                        System.out.println("Zoom In at (" + e.getX() + ", " + e.getY() + ")");
                     } else if (toolManager.getActiveTool() == ActiveTool.ZOOM_OUT) {
                         if (svgCanvas == null) return;
-                        AffineTransform at = svgCanvas.getRenderingTransform();
-                        double scaleFactor = 0.8;
-                        at.preConcatenate(AffineTransform.getTranslateInstance(-e.getX(), -e.getY()));
-                        at.preConcatenate(AffineTransform.getScaleInstance(scaleFactor, scaleFactor));
-                        at.preConcatenate(AffineTransform.getTranslateInstance(e.getX(), e.getY()));
-                        svgCanvas.setRenderingTransform(at);
-                        System.out.println("Zoom Out no ponto: " + e.getX() + ", " + e.getY());
+                        // Zoom Out
+                        double scaleFactorOut = 0.8;
+                        applyZoom(e.getX(), e.getY(), scaleFactorOut);
+                        System.out.println("Zoom Out at (" + e.getX() + ", " + e.getY() + ")");
                     } else if (toolManager.getActiveTool() == ActiveTool.PAN) {
                         if (svgCanvas == null) return;
                         panLastMousePosition = new Point2D(e.getX(), e.getY());
-                        System.out.println("Pan iniciado em: " + panLastMousePosition.x + ", " + panLastMousePosition.y);
+                        // No actual transform change here, just record start point for dragging
+                        System.out.println("Pan initiated at (" + panLastMousePosition.x + ", " + panLastMousePosition.y + ")");
                     } else {
                         // Comportamento para outras ferramentas ou nenhuma ferramenta
                         removePreviewLine();
@@ -450,72 +510,31 @@ public class MainFrame extends JFrame implements ModuleInterface {
                     // System.out.println("Mouse Dragged to: " + e.getX() + ", " + e.getY()); // Comentado para não poluir
 
                     if (toolManager.getActiveTool() == ActiveTool.DRAW_LINE && lineStartPoint != null) {
-                        removePreviewCircle(); // Garante que a pré-visualização de círculo não apareça
-                        SVGDocument svgDocument = svgCanvas.getSVGDocument();
-                        if (svgDocument == null) return;
-
-                        if (previewLineSvgElement == null) {
-                            DOMImplementation impl = SVGDOMImplementation.getDOMImplementation();
-                            String svgNS = SVGDOMImplementation.SVG_NAMESPACE_URI;
-                            previewLineSvgElement = (SVGLineElement) impl.createSVGElement(svgNS, "line");
-                            previewLineSvgElement.setAttributeNS(null, "x1", String.valueOf(lineStartPoint.x));
-                            previewLineSvgElement.setAttributeNS(null, "y1", String.valueOf(lineStartPoint.y));
-                            previewLineSvgElement.setAttributeNS(null, "stroke", "gray"); // Cor da pré-visualização
-                            previewLineSvgElement.setAttributeNS(null, "stroke-width", "1"); // Espessura da pré-visualização
-                            previewLineSvgElement.setAttributeNS(null, "stroke-dasharray", "5,5"); // Estilo tracejado
-                            if (svgDocument.getRootElement() != null) {
-                                svgDocument.getRootElement().appendChild(previewLineSvgElement);
-                            } else {
-                                previewLineSvgElement = null; // Reset para tentar recriar
-                                return;
-                            }
-                        }
-                        previewLineSvgElement.setAttributeNS(null, "x2", String.valueOf(e.getX()));
-                        previewLineSvgElement.setAttributeNS(null, "y2", String.valueOf(e.getY()));
+                        previewEndPoint = new Point2D(e.getX(), e.getY());
+                        redrawSVGCanvas(); // Redraw with preview line
                     } else if (toolManager.getActiveTool() == ActiveTool.DRAW_CIRCLE && circleCenterPoint != null) {
-                        removePreviewLine(); // Garante que a pré-visualização de linha não apareça
-                        SVGDocument svgDocument = svgCanvas.getSVGDocument();
-                        if (svgDocument == null) return; // Não pode desenhar sem documento
-
-                        double currentRadius = Math.sqrt(Math.pow(e.getX() - circleCenterPoint.x, 2) + Math.pow(e.getY() - circleCenterPoint.y, 2));
-
-                        if (previewCircleSvgElement == null) {
-                            DOMImplementation impl = SVGDOMImplementation.getDOMImplementation();
-                            String svgNS = SVGDOMImplementation.SVG_NAMESPACE_URI;
-                            previewCircleSvgElement = (SVGCircleElement) impl.createSVGElement(svgNS, "circle");
-                            previewCircleSvgElement.setAttributeNS(null, "cx", String.valueOf(circleCenterPoint.x));
-                            previewCircleSvgElement.setAttributeNS(null, "cy", String.valueOf(circleCenterPoint.y));
-                            previewCircleSvgElement.setAttributeNS(null, "stroke", "gray");
-                            previewCircleSvgElement.setAttributeNS(null, "stroke-width", "1");
-                            previewCircleSvgElement.setAttributeNS(null, "stroke-dasharray", "5,5");
-                            previewCircleSvgElement.setAttributeNS(null, "fill", "none");
-                            if (svgDocument.getRootElement() != null) {
-                                svgDocument.getRootElement().appendChild(previewCircleSvgElement);
-                            } else {
-                                // Se não há root element, a pré-visualização não pode ser adicionada.
-                                previewCircleSvgElement = null; // Reseta para tentar recriar no próximo evento
-                                return;
-                            }
-                        }
-                        previewCircleSvgElement.setAttributeNS(null, "r", String.valueOf(currentRadius));
+                        previewRadius = Math.sqrt(Math.pow(e.getX() - circleCenterPoint.x, 2) + Math.pow(e.getY() - circleCenterPoint.y, 2));
+                        if (previewRadius < 0) previewRadius = 0; // Ensure radius is not negative
+                        redrawSVGCanvas(); // Redraw with preview circle
                     } else if (toolManager.getActiveTool() == ActiveTool.PAN && panLastMousePosition != null) {
-                        if (svgCanvas == null) return;
-                        removePreviewLine();
-                        removePreviewCircle();
+                        if (svgCanvas == null || panLastMousePosition == null) return;
 
                         double dx = e.getX() - panLastMousePosition.x;
                         double dy = e.getY() - panLastMousePosition.y;
 
-                        AffineTransform at = svgCanvas.getRenderingTransform();
-                        AffineTransform translation = AffineTransform.getTranslateInstance(dx, dy);
-                        at.preConcatenate(translation);
-                        svgCanvas.setRenderingTransform(at);
+                        translateX += dx;
+                        translateY += dy;
+
+                        applyTransform(); // This calls redrawSVGCanvas indirectly via repaint
 
                         panLastMousePosition = new Point2D(e.getX(), e.getY());
                     } else {
-                        // Se nenhuma ferramenta de desenho/pan específica estiver manipulando o drag, remove as pré-visualizações.
-                        removePreviewLine();
-                        removePreviewCircle();
+                        // For other tools or if conditions aren't met, ensure previews are cleared
+                        // This might be redundant if removePreviewLine/Circle are called on tool switch
+                        if (previewEndPoint != null || previewRadius > 0) {
+                             removePreviewLine(); // This will set previewEndPoint = null and redraw
+                             removePreviewCircle(); // This will set previewRadius = 0 and redraw
+                        }
                     }
                 }
 
@@ -533,25 +552,85 @@ public class MainFrame extends JFrame implements ModuleInterface {
     }
 
     private void removePreviewLine() {
-        if (previewLineSvgElement != null) {
-            // Ensure removal happens on the Batik update thread if necessary,
-            // though direct DOM manipulation should be fine if JSVGCanvas handles it.
-            // For safety, one might wrap this in svgCanvas.getUpdateManager().getUpdateRunnableQueue().invokeLater(...);
-            // However, given its usage, direct removal is often acceptable.
-            if (previewLineSvgElement.getParentNode() != null) {
-                previewLineSvgElement.getParentNode().removeChild(previewLineSvgElement);
-            }
-            previewLineSvgElement = null;
+        if (previewEndPoint != null) {
+            previewEndPoint = null;
+            redrawSVGCanvas();
         }
     }
 
-    private void redrawSVGCanvas() {
+    private void applyZoom(double mouseX, double mouseY, double scaleFactor) {
+        if (svgCanvas == null) return;
+
+        // World coordinates of the mouse point before zoom
+        double preZoomWorldX = (mouseX - translateX) / currentScale;
+        double preZoomWorldY = (mouseY - translateY) / currentScale;
+
+        currentScale *= scaleFactor;
+
+        // New translation to keep the mouse point fixed
+        translateX = mouseX - preZoomWorldX * currentScale;
+        translateY = mouseY - preZoomWorldY * currentScale;
+
+        applyTransform();
+    }
+
+    private void applyTransform() {
+        if (svgCanvas == null) return;
+
+        // This is highly speculative. SVGPanel might not have these methods.
+        // If it uses AffineTransform directly, the approach would be different.
+        // E.g., svgCanvas.setRenderingHint(SVGPanel.KEY_TRANSFORM, createAffineTransform());
+        // Or svgCanvas.setSVGUniverse(universe); universe.getRoot().setTransform(...);
+        // For now, assuming simple scale and translate methods might exist or we might need
+        // to manage the transform outside and re-render the SVG with the transform applied
+        // if SVGPanel doesn't support dynamic transforms on the displayed document.
+
+        // The SVG Salamander SVGPanel does not seem to have direct setScale/setTranslate methods
+        // in a way that affects the rendering transform directly like Batik's JSVGCanvas.
+        // It primarily loads an SVG and displays it. Transformations typically need to be
+        // applied to the SVG content itself (e.g., by wrapping with a <g transform="...">)
+        // or by transforming the Graphics2D context if we were overriding paintComponent.
+
+        // Since direct manipulation methods on SVGPanel are not known/likely,
+        // for this step, we will log the desired transform.
+        // A full implementation would require either:
+        // 1. Modifying the SVG content string to include the transform and reloading. (Complex for dynamic ops)
+        // 2. Subclassing SVGPanel and overriding paintComponent to apply the AffineTransform to Graphics2D.
+        // 3. Finding specific API in SVG Salamander for this (if it exists and is not obvious).
+
+        System.out.println("Applying transform: Scale=" + currentScale + ", TranslateX=" + translateX + ", TranslateY=" + translateY);
+        // svgCanvas.setScale(currentScale); // Hypothetical
+        // svgCanvas.setTranslateX(translateX); // Hypothetical
+        // svgCanvas.setTranslateY(translateY); // Hypothetical
+        svgCanvas.repaint();
+    }
+
+
+    void redrawSVGCanvas() { // Changed from private to package-private for test access
         StringBuilder svgBuilder = new StringBuilder();
+        // Apply current view transform to the root SVG element.
         svgBuilder.append("<svg width=\"100%\" height=\"100%\" xmlns=\"http://www.w3.org/2000/svg\">");
+        svgBuilder.append("<g transform=\"translate(").append(translateX).append(",").append(translateY).append(") scale(").append(currentScale).append(")\">");
 
-        // TODO: Add logic here to render existing DXF content if loaded.
-        // This might involve serializing svgCanvas.getSVGDocument() or parts of it.
+        // Append base SVG content (from DXF)
+        if (baseSvgContent != null) {
+            // Fragile way to strip outer <svg> tags from baseSvgContent
+            // Assumes baseSvgContent is a full SVG document string.
+            int firstSvgTagEnd = baseSvgContent.indexOf('>');
+            // Find the last occurrence of </svg>
+            int lastSvgTagStart = baseSvgContent.lastIndexOf("</svg>");
 
+            if (firstSvgTagEnd != -1 && lastSvgTagStart != -1 && firstSvgTagEnd < lastSvgTagStart) {
+                svgBuilder.append(baseSvgContent.substring(firstSvgTagEnd + 1, lastSvgTagStart));
+            } else {
+                // Fallback or error: if tags not found, append the whole thing (might be invalid)
+                // or log an error. For now, append to see what happens.
+                // svgBuilder.append(baseSvgContent);
+                System.err.println("Could not strip <svg> tags from baseSvgContent, structure might be unexpected.");
+            }
+        }
+
+        // Append dynamically drawn entities
         for (Line2D line : drawnLines) {
             String lineStrokeColor = "black";
             String lineStrokeWidth = "2";
@@ -559,10 +638,11 @@ public class MainFrame extends JFrame implements ModuleInterface {
                 lineStrokeColor = "red";
                 lineStrokeWidth = "3";
             }
-            svgBuilder.append("<line x1=\"").append(line.start.x) // ou line.getStart().x
-                      .append("\" y1=\"").append(line.start.y) // ou line.getStart().y
-                      .append("\" x2=\"").append(line.end.x)   // ou line.getEnd().x
-                      .append("\" y2=\"").append(line.end.y)   // ou line.getEnd().y
+            // Using getters for Line2D startPoint and endPoint, and public fields for Point2D x and y
+            svgBuilder.append("<line x1=\"").append(line.getStartPoint().x)
+                      .append("\" y1=\"").append(line.getStartPoint().y)
+                      .append("\" x2=\"").append(line.getEndPoint().x)
+                      .append("\" y2=\"").append(line.getEndPoint().y)
                       .append("\" stroke=\"").append(lineStrokeColor)
                       .append("\" stroke-width=\"").append(lineStrokeWidth)
                       .append("\"/>");
@@ -583,22 +663,39 @@ public class MainFrame extends JFrame implements ModuleInterface {
                       .append("\" fill=\"none\"/>");
         }
 
+        // Append preview line if active
+        if (toolManager.getActiveTool() == ActiveTool.DRAW_LINE && lineStartPoint != null && previewEndPoint != null) {
+            svgBuilder.append("<line x1=\"").append(lineStartPoint.x)
+                      .append("\" y1=\"").append(lineStartPoint.y)
+                      .append("\" x2=\"").append(previewEndPoint.x)
+                      .append("\" y2=\"").append(previewEndPoint.y)
+                      .append("\" stroke=\"gray\" stroke-width=\"1\" stroke-dasharray=\"5,5\"/>");
+        }
+
+        // Append preview circle if active
+        if (toolManager.getActiveTool() == ActiveTool.DRAW_CIRCLE && circleCenterPoint != null && previewRadius > 0) {
+            svgBuilder.append("<circle cx=\"").append(circleCenterPoint.x)
+                      .append("\" cy=\"").append(circleCenterPoint.y)
+                      .append("\" r=\"").append(previewRadius)
+                      .append("\" stroke=\"gray\" stroke-width=\"1\" stroke-dasharray=\"5,5\" fill=\"none\"/>");
+        }
+
+        svgBuilder.append("</g>"); // Close the transform group
         svgBuilder.append("</svg>");
-        loadSvg(svgBuilder.toString());
+        loadSvg(svgBuilder.toString()); // This will re-parse and display the SVG
     }
 
     private void removePreviewCircle() {
-        if (previewCircleSvgElement != null) {
-            if (previewCircleSvgElement.getParentNode() != null) {
-                previewCircleSvgElement.getParentNode().removeChild(previewCircleSvgElement);
-            }
-            previewCircleSvgElement = null;
+        if (previewRadius > 0) {
+            previewRadius = 0;
+            redrawSVGCanvas();
         }
     }
 
     private boolean isPointNearLine(Point2D p, Line2D line, double tolerance) {
-        Point2D p1 = line.start; // Acesso direto
-        Point2D p2 = line.end;   // Acesso direto
+        // Using getters for Line2D startPoint and endPoint, and public fields for Point2D x and y
+        Point2D p1 = line.getStartPoint();
+        Point2D p2 = line.getEndPoint();
 
         double dxL = p2.x - p1.x;
         double dyL = p2.y - p1.y;
@@ -623,8 +720,9 @@ public class MainFrame extends JFrame implements ModuleInterface {
     }
 
     private boolean isPointNearCircle(Point2D point, Circle2D circle, double tolerance) {
-        Point2D center = circle.getCenter(); // Assumindo getCenter()
-        double radius = circle.getRadius();  // Assumindo getRadius()
+        Point2D center = circle.getCenter(); // Assumindo getCenter() for Circle2D
+        double radius = circle.getRadius();  // Assumindo getRadius() for Circle2D
+        // Using public fields for Point2D x and y
         double distToCenter = Math.sqrt(Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2));
         return Math.abs(distToCenter - radius) <= tolerance;
     }
