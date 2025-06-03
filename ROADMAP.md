@@ -70,12 +70,14 @@ Este documento detalha o status atual de implementação das funcionalidades pla
             - `[ ] (P1)` Implementar zoom pela roda do mouse.
             - `[ ] (P1)` Implementar "Zoom to Extents/Fit".
             - `[ ] (P3)` Adicionar mais ações/ferramentas à barra conforme necessário.
+- [X] **Refatorar GUI para remover dependência do Batik e usar SVG Salamander.**
+    - *Detalhe: Substituído JSVGCanvas (Batik) por SVGPanel (SVG Salamander) para renderização de SVG. Funcionalidades de carregamento de SVG, zoom/pan centrado, e pré-visualização de desenho (linha, círculo) foram reimplementadas. A transformação e pré-visualização são feitas via regeneração da string SVG.*
 - `[ ] (P1)` **Painel de Propriedades de Objetos:**
     - *Detalhe:* Criar um painel (ex: `JPanel` em um `JSplitPane` com a área de visualização) que exiba as propriedades da(s) entidade(s) selecionada(s) (ex: coordenadas, raio, cor, camada) e permita sua edição.
 - `[ ] (P1)` **Gerenciamento de Camadas (Layers):**
     - *Detalhe:* Desenvolver um painel ou diálogo para listar as camadas presentes no desenho, permitindo ao usuário criar novas camadas, renomeá-las, definir sua cor, visibilidade, e a camada ativa para desenho.
-- `[ ] (P3)` **Refatorar MainFrame para Testabilidade Headless**
-    - *Detalhe:* Modificar `MainFrame.java` para permitir que seja instanciado e seus métodos de ciclo de vida básicos sejam testados em um ambiente headless sem lançar `HeadlessException`. Isso pode envolver a separação da lógica de UI da instanciação de componentes, permitindo mocks, ou outras técnicas para isolar a lógica da UI da renderização gráfica real durante os testes de unidade.
+- `[~] (P1)` **Refatorar MainFrame para Testabilidade Headless e Melhorar Cobertura de Testes da GUI**
+    - *Detalhe:* Modificar `MainFrame.java` para separar sua lógica central (geração de SVG, gerenciamento de estado de ferramentas, cálculos de zoom/pan) de suas responsabilidades de UI Swing, movendo a lógica para uma classe não-UI. Isso permitirá que a lógica seja testada unitariamente sem `HeadlessException`. Testes unitários para `ToolManager` foram implementados e passam. A estrutura de teste para a lógica de `MainFrame` foi criada, mas os testes estão desabilitados/falhando devido a `HeadlessException` e aguardam esta refatoração.
 - `[ ] (P3)` **Integrar Ciclo de Vida do Módulo GUI com Kernel via ModuleInterface**
     - *Detalhe:* Utilizar a `ModuleInterface` implementada por `com.cad.gui.MainFrame` para que o `Kernel` (ou `ModuleManager`) possa gerenciar o ciclo de vida do módulo `gui` (chamando `init`, `start`, `stop`, `destroy`).
 
@@ -95,4 +97,3 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - `[ ] (P5)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
 - `[ ] (P1)` **Suporte para Outras Entidades DXF (HATCH, DIMENSION, SPLINE, ELLIPSE, etc.):**
     - *Detalhe:* Estender o `dxflib` para parsear e representar entidades DXF adicionais como HATCH, DIMENSION, SPLINE, ELLIPSE, MTEXT, POLYLINE (entidade complexa com vértices), POINT, SOLID, entre outras, conforme a necessidade.
-```
