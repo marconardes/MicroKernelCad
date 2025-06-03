@@ -255,23 +255,37 @@ public class DxfParser {
     }
 
     private void parseBlocksSection() throws IOException, DxfParserException {
-        aktuellenGroupCode = nextGroupCode();
+        aktuellenGroupCode = nextGroupCode(); // Initial read, should be the first "0" "BLOCK" or "0" "ENDSEC" if empty
         while (aktuellenGroupCode != null) {
             if (aktuellenGroupCode.code == 0) {
                 if ("ENDSEC".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    aktuellenGroupCode = nextGroupCode();
+                    aktuellenGroupCode = nextGroupCode(); // Consume ENDSEC, prepare for next section or EOF
                     currentSection = null;
                     return;
                 } else if ("BLOCK".equalsIgnoreCase(aktuellenGroupCode.value)) {
                     parseSingleBlockDefinition();
+                    // parseSingleBlockDefinition consumes its corresponding "0" "ENDBLK"
+                    // and calls nextGroupCode(), so aktuellenGroupCode is now
+                    // pointing to the next "0" "BLOCK" or "0" "ENDSEC".
+                    // The loop will correctly evaluate this in the next iteration.
+                    // No explicit nextGroupCode() call is needed here.
                 } else {
                     throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " in BLOCKS section while expecting BLOCK or ENDSEC.");
                 }
             } else {
-                 throw new DxfParserException("Premature EOF in BLOCKS section expecting 0 code.");
+                 // If aktuellenGroupCode.code is not 0, we are expecting a 0 BLOCK or 0 ENDSEC.
+                 // This means previous entity/block parsing finished, and the current code is not a new 0-marker.
+                 // We should skip such codes until we find a 0 or hit EOF.
+                 // System.err.println("INFO: Skipping unexpected non-zero group code " + aktuellenGroupCode + " in BLOCKS section, expecting 0/BLOCK or 0/ENDSEC.");
+                 aktuellenGroupCode = nextGroupCode(); // Consume the unexpected non-zero code and try again
+                 // The loop will continue and re-evaluate the new aktuellenGroupCode
             }
         }
-        throw new DxfParserException("Premature EOF in BLOCKS section (outer loop).");
+        // If currentSection is still "BLOCKS", it means EOF was reached before ENDSEC
+        if ("BLOCKS".equalsIgnoreCase(currentSection)) {
+             throw new DxfParserException("Premature EOF in BLOCKS section (outer loop), ENDSEC not found.");
+        }
+        // If aktuellenGroupCode is null and currentSection is not BLOCKS, it's a normal EOF after all sections.
     }
 
     private void parseSingleBlockDefinition() throws IOException, DxfParserException {
