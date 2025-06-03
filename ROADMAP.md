@@ -26,8 +26,8 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 
 **Módulos de Funcionalidade:**
 *Módulo de Geometria (`geometry`):*
-- `[ ] (P1)` **Implementação de operações geométricas básicas (criação de linhas, círculos, etc.):**
-    - *Detalhe:* Definir e implementar classes para representar entidades geométricas 2D básicas (Ponto, Linha, Círculo, Arco, Polilinha). Incluir métodos para criação e manipulação inicial dessas entidades. Essencial para qualquer funcionalidade de desenho.
+- `[X] (P1)` **Implementação de operações geométricas básicas (criação de linhas, círculos, etc.):**
+    - *Detalhe:* Definir e implementar classes para representar entidades geométricas 2D básicas (Ponto reutilizado do `dxflib`, Linha, Círculo, Arco, Polilinha implementados em `com.cad.modules.geometry.entities`). Incluir métodos para criação e manipulação inicial dessas entidades. Testes unitários básicos para getters e construtores foram adicionados. Essencial para qualquer funcionalidade de desenho.
 - `[ ] (P2)` **Implementação de operações geométricas avançadas (booleanas, etc.):**
     - *Detalhe:* Desenvolver algoritmos para operações booleanas (união, interseção, diferença) entre formas 2D, cálculo de offset, filetes e chanfros.
 *Módulo de Renderização (`rendering`):*
