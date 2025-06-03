@@ -559,10 +559,10 @@ public class MainFrame extends JFrame implements ModuleInterface {
                 lineStrokeColor = "red";
                 lineStrokeWidth = "3";
             }
-            svgBuilder.append("<line x1=\"").append(line.start.x) // ou line.getStart().x
-                      .append("\" y1=\"").append(line.start.y) // ou line.getStart().y
-                      .append("\" x2=\"").append(line.end.x)   // ou line.getEnd().x
-                      .append("\" y2=\"").append(line.end.y)   // ou line.getEnd().y
+            svgBuilder.append("<line x1=\"").append(line.getStartPoint().x) // ou line.getStart().x
+                      .append("\" y1=\"").append(line.getStartPoint().y) // ou line.getStart().y
+                      .append("\" x2=\"").append(line.getEndPoint().x)   // ou line.getEnd().x
+                      .append("\" y2=\"").append(line.getEndPoint().y)   // ou line.getEnd().y
                       .append("\" stroke=\"").append(lineStrokeColor)
                       .append("\" stroke-width=\"").append(lineStrokeWidth)
                       .append("\"/>");
@@ -597,8 +597,8 @@ public class MainFrame extends JFrame implements ModuleInterface {
     }
 
     private boolean isPointNearLine(Point2D p, Line2D line, double tolerance) {
-        Point2D p1 = line.start; // Acesso direto
-        Point2D p2 = line.end;   // Acesso direto
+        Point2D p1 = line.getStartPoint(); // Acesso direto
+        Point2D p2 = line.getEndPoint();   // Acesso direto
 
         double dxL = p2.x - p1.x;
         double dyL = p2.y - p1.y;
