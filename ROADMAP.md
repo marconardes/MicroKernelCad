@@ -53,9 +53,21 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - [X] Placeholder para Área de Visualização CAD: Adicionado e funcional com renderização SVG.
 - [X] Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
 - `[~] (P1)` **Interação com o Mouse para Desenho/Seleção:**
-    - *Detalhe:* Implementar listeners de mouse na área de visualização para: (desenho de novas entidades, seleção de entidades existentes, etc.). *Status: Listeners básicos (mousePressed, mouseDragged, mouseClicked) adicionados ao JSVGCanvas, imprimindo coordenadas no console.*
+    - *Detalhe:* Implementar listeners de mouse na área de visualização para: (desenho de novas entidades, seleção de entidades existentes, etc.).
+        - *Status: Listeners básicos (mousePressed, mouseDragged, mouseClicked) adicionados. Lógica de estado de ferramenta (`ToolManager`, `ActiveTool`) implementada. Captura de dois pontos para criar `Line2D` (sem pré-visualização/renderização) funcional quando `DRAW_LINE` está ativo.*
+        - **Próximos Passos:**
+            - Implementar pré-visualização dinâmica para o desenho de linhas (`mouseDragged`).
+            - Renderizar a `Line2D` final no `JSVGCanvas` (atualizar SVG).
+            - Implementar desenho de `Circle2D` (captura de pontos, pré-visualização, renderização).
+            - Implementar a detecção de "hit" para selecionar entidades.
+            - Fornecer feedback visual mais elaborado (cursor, destaques).
 - `[~] (P1)` **Barra de Ferramentas com Ações CAD:**
-    - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse". *Status: JToolBar adicionada ao MainFrame com botões placeholder (sem funcionalidade ainda).*
+    - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse".
+        - *Status: JToolBar adicionada. `ActionListeners` implementados para botões definirem a ferramenta ativa no `ToolManager` (ex: DRAW_LINE, DRAW_CIRCLE).*
+        - **Próximos Passos:**
+            - Melhorar o feedback visual para o botão/ferramenta ativa na toolbar.
+            - Implementar funcionalidades de Zoom In/Out e Pan.
+            - Conectar mais ações da barra de ferramentas à lógica de interação do mouse à medida que forem desenvolvidas.
 - `[ ] (P2)` **Painel de Propriedades de Objetos:**
     - *Detalhe:* Criar um painel (ex: `JPanel` em um `JSplitPane` com a área de visualização) que exiba as propriedades da(s) entidade(s) selecionada(s) (ex: coordenadas, raio, cor, camada) e permita sua edição.
 - `[ ] (P2)` **Gerenciamento de Camadas (Layers):**
