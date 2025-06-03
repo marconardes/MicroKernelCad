@@ -1,48 +1,33 @@
 package com.cad.gui;
 
-import javax.swing.JFrame;
-import java.awt.BorderLayout;
-import javax.swing.JMenuBar;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JToolBar; // Added for JToolBar
-import javax.swing.JButton;  // Added for JButton - Still needed for non-tool buttons if any
-import javax.swing.JToggleButton;
-import javax.swing.ButtonGroup;
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane; // Para mostrar erros
-import javax.swing.filechooser.FileNameExtensionFilter;
-import org.apache.batik.swing.JSVGCanvas;
-import org.w3c.dom.svg.SVGDocument;
-import org.w3c.dom.svg.SVGElement;
-import org.w3c.dom.svg.SVGLineElement;
+import com.cad.core.api.ModuleInterface;
+import com.cad.dxflib.common.Point2D;
+import com.cad.dxflib.parser.DxfParserException;
+import com.cad.gui.tool.ActiveTool;
+import com.cad.gui.tool.ToolManager;
+import com.cad.modules.geometry.entities.Circle2D;
+import com.cad.modules.geometry.entities.Line2D;
+import com.cad.modules.rendering.DxfRenderService;
 import org.apache.batik.dom.svg.SVGDOMImplementation;
+import org.apache.batik.swing.JSVGCanvas;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.svg.SVGCircleElement;
-import com.cad.modules.geometry.entities.Circle2D;
-import java.awt.Cursor;
-import java.awt.geom.AffineTransform;
+import org.w3c.dom.svg.SVGDocument;
+import org.w3c.dom.svg.SVGLineElement;
 
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
+import java.awt.geom.AffineTransform;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-// Assuming Line2D is the correct class as per previous context
-// import com.cad.modules.geometry.entities.GeometricEntity; // Not used for now
-import java.io.FileNotFoundException;
-import java.io.IOException; // Para exceções do serviço
-import java.awt.event.MouseAdapter; // Added for mouse events
-import java.awt.event.MouseEvent;   // Added for mouse events
-import java.awt.event.MouseMotionListener; // Added for mouse motion events
-
-// Nova importação para o serviço de renderização
-import com.cad.modules.rendering.DxfRenderService;
-import com.cad.dxflib.parser.DxfParserException; // Para exceção do serviço
-import com.cad.core.api.ModuleInterface; // Added import
-import com.cad.gui.tool.ActiveTool; // Added for ActiveTool
-import com.cad.gui.tool.ToolManager; // Added for ToolManager
-import com.cad.dxflib.common.Point2D; // Added for Point2D
-import com.cad.modules.geometry.entities.Line2D; // Added for Line2D
 
 public class MainFrame extends JFrame implements ModuleInterface {
 

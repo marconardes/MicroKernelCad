@@ -1,6 +1,7 @@
 com/cad/core/api/EventBus.class
 com/cad/core/kernel/Kernel.class
 com/cad/core/services/Utils.class
+com/cad/modules/geometry/entities/Circle2D.class
 com/cad/core/kernel/ModuleManager.class
 com/cad/core/services/LoggerService.class
 com/cad/core/api/ModuleInterface.class
