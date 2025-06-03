@@ -94,5 +94,5 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 ## Melhorias Futuras Planejadas
 - `[ ] (P5)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
 - `[ ] (P1)` **Suporte para Outras Entidades DXF (HATCH, DIMENSION, SPLINE, ELLIPSE, etc.):**
-    - *Detalhe:* Estender o `dxflib` para parsear e representar entidades DXF adicionais como HATCH, DIMENSION, SPLINE, ELLIPSE, entre outras, conforme a necessidade.
+    - *Detalhe:* Estender o `dxflib` para parsear e representar entidades DXF adicionais como HATCH, DIMENSION, SPLINE, ELLIPSE, MTEXT, POLYLINE (entidade complexa com vértices), POINT, SOLID, entre outras, conforme a necessidade.
 ```
