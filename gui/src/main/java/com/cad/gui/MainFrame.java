@@ -1,14 +1,13 @@
 package com.cad.gui;
 
 import com.cad.core.api.ModuleInterface;
-import com.cad.dxflib.common.Point2D; // Keep if Point2D is used in event data, e.g. new Point2D(e.getX(), e.getY())
-import com.cad.dxflib.parser.DxfParserException; // Keep for openDxfFile JOptionPane
+import com.cad.dxflib.common.Point2D;
+import com.cad.dxflib.parser.DxfParserException;
 import com.cad.gui.tool.ActiveTool;
 import com.cad.gui.tool.ToolManager;
-// Entities are now managed by CadPanelLogic
-// import com.cad.modules.geometry.entities.Circle2D;
-// import com.cad.modules.geometry.entities.Line2D;
-import com.cad.modules.rendering.DxfRenderService; // CadPanelLogic will need this
+import com.cad.modules.geometry.entities.Circle2D;
+import com.cad.modules.geometry.entities.Line2D;
+import com.cad.modules.rendering.DxfRenderService;
 import com.kitfox.svg.app.beans.SVGPanel;
 
 import javax.swing.*;
@@ -17,33 +16,33 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
-import java.io.File; // Keep for JFileChooser
-import java.io.FileInputStream; // Keep for openDxfFile
-import java.io.FileNotFoundException; // Keep for openDxfFile
-import java.io.IOException; // Keep for openDxfFile
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.FileWriter; // New import
+import java.io.BufferedWriter; // New import
 // ArrayList and List are now managed by CadPanelLogic
 // import java.util.ArrayList;
 // import java.util.List;
+import java.net.URI; // Keep for URI creation
+// URLEncoder and StandardCharsets might not be needed if using File URI
+// import java.net.URLEncoder;
+// import java.nio.charset.StandardCharsets;
 
 public class MainFrame extends JFrame implements ModuleInterface {
 
-    SVGPanel svgCanvas; // UI component, stays in MainFrame
-    ToolManager toolManager; // UI related state, stays in MainFrame
+    SVGPanel svgCanvas;
+    ToolManager toolManager;
 
-    private CadPanelLogic cadPanelLogic; // Handles the core logic
+    private CadPanelLogic cadPanelLogic;
 
-    // Getter for tests to access CadPanelLogic
     CadPanelLogic getCadPanelLogic() {
         return this.cadPanelLogic;
     }
 
-    // Package-private setter for tests to inject a mock SVGPanel
     void setSvgCanvasForTest(SVGPanel canvas) {
         this.svgCanvas = canvas;
-        // If mouse listeners were added to the real svgCanvas in ensureSvgCanvasInitialized,
-        // tests might need to be aware or this method might need to re-attach them
-        // to the mock if those listeners are part of what's being tested indirectly.
-        // For now, tests mock interactions on svgCanvas directly via Mockito.
     }
 
     public MainFrame() {
@@ -52,7 +51,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
 
     public MainFrame(boolean initializeUI) {
         this.toolManager = new ToolManager();
-        // DxfRenderService is now instantiated within CadPanelLogic
         this.cadPanelLogic = new CadPanelLogic(this.toolManager, new DxfRenderService());
 
         if (initializeUI) {
@@ -67,8 +65,10 @@ public class MainFrame extends JFrame implements ModuleInterface {
         setLayout(new BorderLayout());
 
         ensureSvgCanvasInitialized();
-        // Initial state for logic components is handled in CadPanelLogic constructor
-        redrawSVGCanvas(); // Draw initial state from CadPanelLogic
+        cadPanelLogic.currentScale = 1.0;
+        cadPanelLogic.translateX = 0.0;
+        cadPanelLogic.translateY = 0.0;
+        redrawSVGCanvas();
 
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("Arquivo");
@@ -87,8 +87,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
         toolBar.setFloatable(false);
         ButtonGroup toolModeGroup = new ButtonGroup();
 
-        // Tool buttons now primarily set the tool in ToolManager and update UI state.
-        // Logic for clearing previews etc. is handled by CadPanelLogic or MainFrame delegates.
         JToggleButton lineToggleButton = new JToggleButton("Linha");
         lineToggleButton.addActionListener(e -> {
             if (lineToggleButton.isSelected()) {
@@ -157,10 +155,8 @@ public class MainFrame extends JFrame implements ModuleInterface {
     }
 
     private void clearDrawingStateForNewOperation() {
-        // Delegate state clearing to CadPanelLogic
         cadPanelLogic.clearPreviewLineState();
         cadPanelLogic.clearPreviewCircleState();
-        // Reset interaction-specific points in logic
         cadPanelLogic.lineStartPoint = null;
         cadPanelLogic.circleCenterPoint = null;
 
@@ -175,7 +171,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
                  svgCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
              }
         }
-        // If deselection should happen on any tool change other than SELECT:
         if (toolManager.getActiveTool() != ActiveTool.SELECT && cadPanelLogic.selectedEntity != null) {
             cadPanelLogic.selectedEntity = null;
             redrawSVGCanvas();
@@ -212,7 +207,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
         int userSelection = fileChooser.showOpenDialog(this);
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToOpen = fileChooser.getSelectedFile();
-            // Delegate file handling and state reset to CadPanelLogic
             cadPanelLogic.loadDxfFromFile(fileToOpen);
             redrawSVGCanvas();
         }
@@ -221,20 +215,55 @@ public class MainFrame extends JFrame implements ModuleInterface {
     public void loadSvg(String completeSvgString) {
         javax.swing.SwingUtilities.invokeLater(() -> {
             ensureSvgCanvasInitialized();
-            if (svgCanvas == null) return;
+            if (svgCanvas == null) {
+                 System.err.println("SVGCanvas not initialized in loadSvg invokeLater");
+                 return;
+            }
             if (completeSvgString == null || completeSvgString.trim().isEmpty()) {
-                try { svgCanvas.setSvgURI(null); } catch (Exception e) { e.printStackTrace(); }
-            } else {
                 try {
-                    String encodedSvg = java.net.URLEncoder.encode(completeSvgString, "UTF-8").replace("+", "%20");
-                    java.net.URI svgUri = new java.net.URI("data:image/svg+xml;charset=UTF-8," + encodedSvg);
-                    svgCanvas.setSvgURI(svgUri);
+                    svgCanvas.setSvgURI(null); // Clear display
                 } catch (Exception e) {
-                     e.printStackTrace();
-                     try { svgCanvas.setSvgURI(null); } catch (Exception ex) { ex.printStackTrace(); }
+                    System.err.println("Error trying to clear SVG canvas: " + e.getMessage());
+                    e.printStackTrace();
+                }
+                svgCanvas.repaint();
+                return;
+            }
+
+            File tempFile = null;
+            try {
+                tempFile = File.createTempFile("cadviewer-temp-svg-", ".svg");
+                tempFile.deleteOnExit(); // Request deletion when JVM exits
+
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+                    writer.write(completeSvgString);
+                }
+
+                URI fileUri = tempFile.toURI();
+                svgCanvas.setSvgURI(fileUri);
+                svgCanvas.repaint();
+
+            } catch (IOException e) {
+                System.err.println("Error creating or writing to temporary SVG file: " + e.getMessage());
+                e.printStackTrace();
+                try { // Fallback: try to clear the canvas
+                    svgCanvas.setSvgURI(null);
+                    svgCanvas.repaint();
+                } catch (Exception ex) {
+                    System.err.println("Error trying to clear SVG canvas after temp file IO failure: " + ex.getMessage());
+                }
+            } catch (Exception e) { // Catch other potential errors from setSvgURI with file URI
+                System.err.println("Error setting SVG URI with temp file: " + e.getMessage());
+                e.printStackTrace();
+                try {
+                    svgCanvas.setSvgURI(null);
+                    svgCanvas.repaint();
+                } catch (Exception ex) {
+                     System.err.println("Error trying to clear SVG canvas after general temp file URI failure: " + ex.getMessage());
                 }
             }
-            svgCanvas.repaint();
+            // Note: Do not explicitly delete tempFile here if SVGPanel might load it asynchronously.
+            // deleteOnExit() is the general strategy.
         });
     }
 
@@ -247,14 +276,12 @@ public class MainFrame extends JFrame implements ModuleInterface {
             MouseAdapter mouseListener = new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    // Delegate to CadPanelLogic to handle the event and update its state
                     cadPanelLogic.handleMousePress(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
-                    redrawSVGCanvas(); // Redraw based on updated state in CadPanelLogic
+                    redrawSVGCanvas();
                 }
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    // Delegate if necessary, e.g., for PAN tool
                     cadPanelLogic.handleMouseRelease(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
                     redrawSVGCanvas();
                 }
@@ -263,7 +290,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
             MouseMotionListener motionListener = new MouseMotionListener() {
                 @Override
                 public void mouseDragged(MouseEvent e) {
-                    // Delegate to CadPanelLogic
                     cadPanelLogic.handleMouseDrag(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
                     redrawSVGCanvas();
                 }
@@ -286,11 +312,11 @@ public class MainFrame extends JFrame implements ModuleInterface {
     private void applyZoom(double mouseX, double mouseY, double scaleFactor) {
         if (cadPanelLogic != null) {
             cadPanelLogic.applyZoom(mouseX, mouseY, scaleFactor);
-            applyTransform(); // repaint
+            applyTransform();
         }
     }
 
-    private void applyTransform() { // This method now primarily triggers repaint
+    private void applyTransform() {
         if (svgCanvas == null || cadPanelLogic == null) return;
         System.out.println("Applying transform: Scale=" + cadPanelLogic.currentScale +
                            ", TranslateX=" + cadPanelLogic.translateX +
@@ -300,7 +326,6 @@ public class MainFrame extends JFrame implements ModuleInterface {
 
     void redrawSVGCanvas() {
         if (cadPanelLogic == null) return;
-        // Get the complete SVG string from CadPanelLogic
         String svgContent = cadPanelLogic.generateSvgContent();
         loadSvg(svgContent);
     }
@@ -311,5 +336,4 @@ public class MainFrame extends JFrame implements ModuleInterface {
             redrawSVGCanvas();
         }
     }
-    // isPointNearLine and isPointNearCircle are now in CadPanelLogic
 }
