@@ -1,2 +1,2 @@
-/app/modules/rendering/src/main/java/com/cad/modules/rendering/DxfRenderService.java
-/app/modules/rendering/src/main/java/com/cad/modules/rendering/RenderEvent.java
+/home/marconardes/IAS Project/MicroKernelCad/modules/rendering/src/main/java/com/cad/modules/rendering/DxfRenderService.java
+/home/marconardes/IAS Project/MicroKernelCad/modules/rendering/src/main/java/com/cad/modules/rendering/RenderEvent.java

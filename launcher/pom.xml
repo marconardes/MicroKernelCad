@@ -36,8 +36,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version> <!-- Or inherit from parent -->
                 <configuration>
-                    <source>21</source> <!-- Or inherit from parent -->
-                    <target>21</target> <!-- Or inherit from parent -->
+                    <source>17</source> <!-- Or inherit from parent -->
+                    <target>17</target> <!-- Or inherit from parent -->
                 </configuration>
             </plugin>
             <plugin>

@@ -13,6 +13,9 @@
         <module name="stl" />
         <module name="geometry" />
         <module name="rendering" />
+        <module name="gui" />
+        <module name="dxflib" />
+        <module name="launcher" />
       </profile>
     </annotationProcessing>
   </component>

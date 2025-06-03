@@ -7,10 +7,13 @@ public class AppLauncher {
 
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            MainFrame frame = new MainFrame();
-            // The MainFrame constructor now calls init() internally.
-            // So, we just need to call start() to make it visible.
-            frame.start();
+            try {
+                MainFrame frame = new MainFrame();
+                frame.start();
+            } catch (java.nio.file.InvalidPathException e) {
+                System.err.println("Error: Invalid file path detected. Please check the file path encoding.");
+                e.printStackTrace();
+            }
         });
     }
 }
