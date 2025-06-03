@@ -7,6 +7,7 @@ public class AppLauncher {
 
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(() -> {
+
             try {
                 MainFrame frame = new MainFrame();
                 frame.start();
