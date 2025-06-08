@@ -36,10 +36,10 @@ Este documento detalha o status atual de implementação das funcionalidades pla
   - *Detalhe:* Desenvolver algoritmos para operações booleanas (união, interseção, diferença) entre formas 2D, cálculo de offset, filetes e chanfros.
 
 #### Módulo de Renderização (`rendering`)
-- `[~] (P2)` **Capacidade de renderizar modelos 2D (foco inicial em formato DXF):**
-  - *Detalhe:* Além da conversão para SVG, explorar a renderização direta de entidades geométricas do `Módulo de Geometria` na GUI. Entidades desenhadas manualmente (`Line2D`, `Circle2D`) são renderizadas sobre o conteúdo DXF carregado no painel SVG. A integração para desenhar *sobre* o DXF é uma melhoria futura (ver GUI). Isso pode envolver a criação de um motor de renderização 2D customizado ou a adaptação de bibliotecas existentes para desenhar em um `java.awt.Graphics2D` (ou similar) dentro do `JSVGCanvas` ou de um painel dedicado. Permitiria maior controle sobre zoom, pan, e seleção visual.
+- `[X] (P2)` **Capacidade de renderizar modelos 2D (foco inicial em formato DXF):**
+  - *Detalhe:* Implementado um motor de renderização 2D customizado (`CustomCadPanel` usando `java.awt.Graphics2D`). Conteúdo DXF (parseado para `SVGUniverse` em memória) e entidades geométricas desenhadas manualmente (`Line2D`, `Circle2D`) são renderizados diretamente via `Graphics2D`. Esta abordagem fornece maior controle sobre o processo de renderização, melhorando significativamente a performance de interações como zoom, pan e desenho de previews em comparação com a abordagem anterior de regeneração total de SVG.
 - `[ ] (P5)` **Capacidade de renderizar modelos 3D.**
-- `[X]` Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
+- `[X]` Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG). # Esta linha pode precisar ser reavaliada ou removida se a renderização SVG via dxflib não for mais o método principal para a GUI. Por ora, mantenho conforme o escopo da tarefa.
 
 #### Módulo de Física (`physics`)
 - `[ ] (P5)` **Implementação de simulações físicas.**

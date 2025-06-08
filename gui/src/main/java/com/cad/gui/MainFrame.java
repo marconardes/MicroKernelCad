@@ -5,10 +5,9 @@ import com.cad.dxflib.common.Point2D;
 import com.cad.dxflib.parser.DxfParserException;
 import com.cad.gui.tool.ActiveTool;
 import com.cad.gui.tool.ToolManager;
-import com.cad.modules.geometry.entities.Circle2D;
-import com.cad.modules.geometry.entities.Line2D;
 import com.cad.modules.rendering.DxfRenderService;
-import com.kitfox.svg.app.beans.SVGPanel;
+// SVGPanel is removed
+// import com.kitfox.svg.app.beans.SVGPanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -16,34 +15,33 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent; // Added for zoom
+import java.awt.event.MouseWheelListener; // Added for zoom
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.FileWriter; // New import
-import java.io.BufferedWriter; // New import
-// ArrayList and List are now managed by CadPanelLogic
-// import java.util.ArrayList;
-// import java.util.List;
-import java.net.URI; // Keep for URI creation
-// URLEncoder and StandardCharsets might not be needed if using File URI
-// import java.net.URLEncoder;
-// import java.nio.charset.StandardCharsets;
+// FileInputStream, FileNotFoundException, IOException, FileWriter, BufferedWriter, URI are likely not needed directly here anymore
+// import java.io.FileInputStream;
+// import java.io.FileNotFoundException;
+// import java.io.IOException;
+// import java.io.FileWriter;
+// import java.io.BufferedWriter;
+// import java.net.URI;
+
 
 public class MainFrame extends JFrame implements ModuleInterface {
 
-    SVGPanel svgCanvas;
+    // SVGPanel svgCanvas; // Removed
+    CustomCadPanel customCadPanel; // Added
     ToolManager toolManager;
 
-    private CadPanelLogic cadPanelLogic;
+    // private CadPanelLogic cadPanelLogic; // Removed
 
-    CadPanelLogic getCadPanelLogic() {
-        return this.cadPanelLogic;
-    }
+    // CadPanelLogic getCadPanelLogic() { // Removed
+    // return this.cadPanelLogic;
+    // }
 
-    void setSvgCanvasForTest(SVGPanel canvas) {
-        this.svgCanvas = canvas;
-    }
+    // void setSvgCanvasForTest(SVGPanel canvas) { // Removed
+    // this.svgCanvas = canvas;
+    // }
 
     public MainFrame() {
         this(true);
@@ -51,7 +49,8 @@ public class MainFrame extends JFrame implements ModuleInterface {
 
     public MainFrame(boolean initializeUI) {
         this.toolManager = new ToolManager();
-        this.cadPanelLogic = new CadPanelLogic(this.toolManager, new DxfRenderService());
+        // this.cadPanelLogic = new CadPanelLogic(this.toolManager, new DxfRenderService()); // Removed
+        this.customCadPanel = new CustomCadPanel(this.toolManager, new DxfRenderService()); // Added
 
         if (initializeUI) {
             initUI();
@@ -64,11 +63,12 @@ public class MainFrame extends JFrame implements ModuleInterface {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        ensureSvgCanvasInitialized();
-        cadPanelLogic.currentScale = 1.0;
-        cadPanelLogic.translateX = 0.0;
-        cadPanelLogic.translateY = 0.0;
-        redrawSVGCanvas();
+        // ensureSvgCanvasInitialized(); // Removed, customCadPanel is initialized in constructor
+        add(customCadPanel, BorderLayout.CENTER); // Add customCadPanel
+        // customCadPanel.currentScale = 1.0; // Access via customCadPanel directly if needed or use methods
+        // customCadPanel.translateX = 0.0;
+        // customCadPanel.translateY = 0.0;
+        customCadPanel.repaint(); // Use repaint
 
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("Arquivo");
@@ -109,20 +109,23 @@ public class MainFrame extends JFrame implements ModuleInterface {
 
         JToggleButton selectToggleButton = new JToggleButton("Selecionar");
         selectToggleButton.addActionListener(e -> {
-             if (selectToggleButton.isSelected()) {
+            if (selectToggleButton.isSelected()) {
                 toolManager.setActiveTool(ActiveTool.SELECT);
                 clearDrawingStateForNewOperation();
-             }
+            }
         });
         toolModeGroup.add(selectToggleButton);
         toolBar.add(selectToggleButton);
         toolBar.addSeparator();
 
+        // Zoom In/Out buttons might be re-purposed or removed if wheel zoom is primary
+        // For now, they can set the tool, and mouse click on panel can trigger zoom.
         JToggleButton zoomInToggleButton = new JToggleButton("Zoom In");
         zoomInToggleButton.addActionListener(e -> {
             if (zoomInToggleButton.isSelected()) {
                 toolManager.setActiveTool(ActiveTool.ZOOM_IN);
                 clearDrawingStateForNewOperation();
+                // customCadPanel.applyZoom(1.2, new Point2D(customCadPanel.getWidth() / 2.0, customCadPanel.getHeight() / 2.0));
             }
         });
         toolModeGroup.add(zoomInToggleButton);
@@ -133,6 +136,7 @@ public class MainFrame extends JFrame implements ModuleInterface {
             if (zoomOutToggleButton.isSelected()) {
                 toolManager.setActiveTool(ActiveTool.ZOOM_OUT);
                 clearDrawingStateForNewOperation();
+                // customCadPanel.applyZoom(1/1.2, new Point2D(customCadPanel.getWidth() / 2.0, customCadPanel.getHeight() / 2.0));
             }
         });
         toolModeGroup.add(zoomOutToggleButton);
@@ -149,32 +153,74 @@ public class MainFrame extends JFrame implements ModuleInterface {
         toolBar.add(panToggleButton);
 
         add(toolBar, BorderLayout.PAGE_START);
-        selectToggleButton.setSelected(true);
+        selectToggleButton.setSelected(true); // Default tool
         toolManager.setActiveTool(ActiveTool.SELECT);
-        clearDrawingStateForNewOperation();
+        clearDrawingStateForNewOperation(); // Set initial cursor
+
+        // Add mouse listeners to customCadPanel
+        customCadPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // For Zoom In/Out tools, a click on the panel will perform the zoom
+                if (toolManager.getActiveTool() == ActiveTool.ZOOM_IN) {
+                    customCadPanel.applyZoom(1.2, new Point2D(e.getX(), e.getY()));
+                } else if (toolManager.getActiveTool() == ActiveTool.ZOOM_OUT) {
+                    customCadPanel.applyZoom(1/1.2, new Point2D(e.getX(), e.getY()));
+                } else {
+                    customCadPanel.handleMousePress(new Point2D(e.getX(), e.getY()));
+                }
+                // repaint is called within handleMousePress or applyZoom
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                customCadPanel.handleMouseRelease(new Point2D(e.getX(), e.getY()));
+                // repaint is called within handleMouseRelease
+            }
+        });
+
+        customCadPanel.addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                customCadPanel.handleMouseDrag(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
+                // repaint is called within handleMouseDrag
+            }
+            @Override public void mouseMoved(MouseEvent e) { /* Not used for now */ }
+        });
+
+        customCadPanel.addMouseWheelListener(new MouseWheelListener() {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e) {
+                double zoomFactor = (e.getWheelRotation() < 0) ? 1.1 : 1 / 1.1;
+                customCadPanel.applyZoom(zoomFactor, new Point2D(e.getX(), e.getY()));
+            }
+        });
     }
 
     private void clearDrawingStateForNewOperation() {
-        cadPanelLogic.clearPreviewLineState();
-        cadPanelLogic.clearPreviewCircleState();
-        cadPanelLogic.lineStartPoint = null;
-        cadPanelLogic.circleCenterPoint = null;
+        if (customCadPanel == null) return; // Guard against null panel
 
-        if (svgCanvas != null) {
-             ActiveTool currentTool = toolManager.getActiveTool();
-             if (currentTool == ActiveTool.DRAW_LINE || currentTool == ActiveTool.DRAW_CIRCLE ||
-                 currentTool == ActiveTool.ZOOM_IN || currentTool == ActiveTool.ZOOM_OUT) {
-                 svgCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-             } else if (currentTool == ActiveTool.PAN) {
-                 svgCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-             } else {
-                 svgCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-             }
+        customCadPanel.clearPreviewLineState();
+        customCadPanel.clearPreviewCircleState();
+        // customCadPanel.lineStartPoint = null; // These are handled by clearPreview methods
+        // customCadPanel.circleCenterPoint = null;
+
+        ActiveTool currentTool = toolManager.getActiveTool();
+        if (currentTool == ActiveTool.DRAW_LINE || currentTool == ActiveTool.DRAW_CIRCLE ||
+            currentTool == ActiveTool.ZOOM_IN || currentTool == ActiveTool.ZOOM_OUT) {
+            customCadPanel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        } else if (currentTool == ActiveTool.PAN) {
+            customCadPanel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        } else {
+            customCadPanel.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         }
-        if (toolManager.getActiveTool() != ActiveTool.SELECT && cadPanelLogic.selectedEntity != null) {
-            cadPanelLogic.selectedEntity = null;
-            redrawSVGCanvas();
-        }
+
+        // if (toolManager.getActiveTool() != ActiveTool.SELECT && customCadPanel.selectedEntity != null) {
+        // customCadPanel.selectedEntity = null; // selectedEntity is private, handle selection clearing in CustomCadPanel if needed
+        // customCadPanel.repaint();
+        // }
+        // For now, let selection persist until another selection is made or tool changes.
+        // If explicit deselection is needed when changing tool, add a method in CustomCadPanel.
     }
 
     @Override
@@ -183,10 +229,11 @@ public class MainFrame extends JFrame implements ModuleInterface {
     @Override
     public void start() {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            if (svgCanvas == null && getContentPane().getComponentCount() == 0) {
+            // if (svgCanvas == null && getContentPane().getComponentCount() == 0) { // Old logic
+            if (getContentPane().getComponentCount() == 0) { // Simplified: if no components, initUI
                 initUI();
-            } else if (svgCanvas == null && getContentPane().getComponentCount() > 0) {
-                ensureSvgCanvasInitialized();
+            // } else if (svgCanvas == null && getContentPane().getComponentCount() > 0) { // Old logic
+            // ensureSvgCanvasInitialized(); // Removed
             }
             setVisible(true);
         });
@@ -207,133 +254,31 @@ public class MainFrame extends JFrame implements ModuleInterface {
         int userSelection = fileChooser.showOpenDialog(this);
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToOpen = fileChooser.getSelectedFile();
-            cadPanelLogic.loadDxfFromFile(fileToOpen);
-            redrawSVGCanvas();
+            // cadPanelLogic.loadDxfFromFile(fileToOpen); // Removed
+            customCadPanel.loadDxfFromFile(fileToOpen); // Added
+            // redrawSVGCanvas(); // Removed
+            customCadPanel.repaint(); // Added
         }
     }
 
-    public void loadSvg(String completeSvgString) {
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            ensureSvgCanvasInitialized();
-            if (svgCanvas == null) {
-                 System.err.println("SVGCanvas not initialized in loadSvg invokeLater");
-                 return;
-            }
-            if (completeSvgString == null || completeSvgString.trim().isEmpty()) {
-                try {
-                    svgCanvas.setSvgURI(null); // Clear display
-                } catch (Exception e) {
-                    System.err.println("Error trying to clear SVG canvas: " + e.getMessage());
-                    e.printStackTrace();
-                }
-                svgCanvas.repaint();
-                return;
-            }
+    // public void loadSvg(String completeSvgString) { // Removed
+    // }
 
-            File tempFile = null;
-            try {
-                tempFile = File.createTempFile("cadviewer-temp-svg-", ".svg");
-                tempFile.deleteOnExit(); // Request deletion when JVM exits
+    // private void ensureSvgCanvasInitialized() { // Removed
+    // }
 
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-                    writer.write(completeSvgString);
-                }
+    // private void removePreviewLine() { // Removed
+    // }
 
-                URI fileUri = tempFile.toURI();
-                svgCanvas.setSvgURI(fileUri);
-                svgCanvas.repaint();
+    // private void applyZoom(double mouseX, double mouseY, double scaleFactor) { // Removed (MainFrame version)
+    // }
 
-            } catch (IOException e) {
-                System.err.println("Error creating or writing to temporary SVG file: " + e.getMessage());
-                e.printStackTrace();
-                try { // Fallback: try to clear the canvas
-                    svgCanvas.setSvgURI(null);
-                    svgCanvas.repaint();
-                } catch (Exception ex) {
-                    System.err.println("Error trying to clear SVG canvas after temp file IO failure: " + ex.getMessage());
-                }
-            } catch (Exception e) { // Catch other potential errors from setSvgURI with file URI
-                System.err.println("Error setting SVG URI with temp file: " + e.getMessage());
-                e.printStackTrace();
-                try {
-                    svgCanvas.setSvgURI(null);
-                    svgCanvas.repaint();
-                } catch (Exception ex) {
-                     System.err.println("Error trying to clear SVG canvas after general temp file URI failure: " + ex.getMessage());
-                }
-            }
-            // Note: Do not explicitly delete tempFile here if SVGPanel might load it asynchronously.
-            // deleteOnExit() is the general strategy.
-        });
-    }
+    // private void applyTransform() { // Removed
+    // }
 
-    private void ensureSvgCanvasInitialized() {
-        if (this.svgCanvas == null) {
-            this.svgCanvas = new SVGPanel();
-            this.svgCanvas.setAntiAlias(true);
-            add(this.svgCanvas, BorderLayout.CENTER);
+    // void redrawSVGCanvas() { // Removed
+    // }
 
-            MouseAdapter mouseListener = new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    cadPanelLogic.handleMousePress(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
-                    redrawSVGCanvas();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    cadPanelLogic.handleMouseRelease(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
-                    redrawSVGCanvas();
-                }
-            };
-
-            MouseMotionListener motionListener = new MouseMotionListener() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    cadPanelLogic.handleMouseDrag(new Point2D(e.getX(), e.getY()), toolManager.getActiveTool());
-                    redrawSVGCanvas();
-                }
-                @Override public void mouseMoved(MouseEvent e) { /* Not used for now */ }
-            };
-
-            this.svgCanvas.addMouseListener(mouseListener);
-            this.svgCanvas.addMouseMotionListener(motionListener);
-            this.svgCanvas.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-        }
-    }
-
-    private void removePreviewLine() {
-        if (cadPanelLogic != null) {
-            cadPanelLogic.clearPreviewLineState();
-            redrawSVGCanvas();
-        }
-    }
-
-    private void applyZoom(double mouseX, double mouseY, double scaleFactor) {
-        if (cadPanelLogic != null) {
-            cadPanelLogic.applyZoom(mouseX, mouseY, scaleFactor);
-            applyTransform();
-        }
-    }
-
-    private void applyTransform() {
-        if (svgCanvas == null || cadPanelLogic == null) return;
-        System.out.println("Applying transform: Scale=" + cadPanelLogic.currentScale +
-                           ", TranslateX=" + cadPanelLogic.translateX +
-                           ", TranslateY=" + cadPanelLogic.translateY);
-        svgCanvas.repaint();
-    }
-
-    void redrawSVGCanvas() {
-        if (cadPanelLogic == null) return;
-        String svgContent = cadPanelLogic.generateSvgContent();
-        loadSvg(svgContent);
-    }
-
-    private void removePreviewCircle() {
-        if (cadPanelLogic != null) {
-            cadPanelLogic.clearPreviewCircleState();
-            redrawSVGCanvas();
-        }
-    }
+    // private void removePreviewCircle() { // Removed
+    // }
 }
