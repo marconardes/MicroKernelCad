@@ -37,7 +37,7 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 
 #### Módulo de Renderização (`rendering`)
 - `[~] (P2)` **Capacidade de renderizar modelos 2D (foco inicial em formato DXF):**
-  - *Detalhe:* Além da conversão para SVG, explorar a renderização direta de entidades geométricas do `Módulo de Geometria` na GUI. Entidades desenhadas manualmente (`Line2D`, `Circle2D`) são agora renderizadas no `JSVGCanvas` (substituindo o conteúdo DXF existente, se houver). A integração para desenhar *sobre* o DXF é uma melhoria futura (ver GUI). Isso pode envolver a criação de um motor de renderização 2D customizado ou a adaptação de bibliotecas existentes para desenhar em um `java.awt.Graphics2D` (ou similar) dentro do `JSVGCanvas` ou de um painel dedicado. Permitiria maior controle sobre zoom, pan, e seleção visual.
+  - *Detalhe:* Além da conversão para SVG, explorar a renderização direta de entidades geométricas do `Módulo de Geometria` na GUI. Entidades desenhadas manualmente (`Line2D`, `Circle2D`) são renderizadas sobre o conteúdo DXF carregado no painel SVG. A integração para desenhar *sobre* o DXF é uma melhoria futura (ver GUI). Isso pode envolver a criação de um motor de renderização 2D customizado ou a adaptação de bibliotecas existentes para desenhar em um `java.awt.Graphics2D` (ou similar) dentro do `JSVGCanvas` ou de um painel dedicado. Permitiria maior controle sobre zoom, pan, e seleção visual.
 - `[ ] (P5)` **Capacidade de renderizar modelos 3D.**
 - `[X]` Integração com a área de visualização da GUI (usando `dxflib` para carregar DXF e renderizar via SVG).
 
