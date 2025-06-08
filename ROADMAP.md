@@ -100,5 +100,19 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 
 ## Melhorias Futuras Planejadas
 - `[ ] (P5)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
-- `[ ] (P1)` **Suporte para Outras Entidades DXF (HATCH, DIMENSION, SPLINE, ELLIPSE, etc.):**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar entidades DXF adicionais como HATCH, DIMENSION, SPLINE, ELLIPSE, MTEXT, POLYLINE (entidade complexa com vértices), POINT, SOLID, entre outras, conforme a necessidade.
+- `[ ] (P1)` **Suporte para Entidade DXF HATCH:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF HATCH.
+- `[ ] (P1)` **Suporte para Entidade DXF DIMENSION:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF DIMENSION.
+- `[ ] (P1)` **Suporte para Entidade DXF SPLINE:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF SPLINE.
+- `[ ] (P1)` **Suporte para Entidade DXF ELLIPSE:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF ELLIPSE.
+- `[ ] (P1)` **Suporte para Entidade DXF MTEXT:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF MTEXT.
+- `[ ] (P1)` **Suporte para Entidade DXF POLYLINE (complexa):**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF POLYLINE (entidade complexa com vértices).
+- `[ ] (P1)` **Suporte para Entidade DXF POINT:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF POINT.
+- `[ ] (P1)` **Suporte para Entidade DXF SOLID:**
+  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF SOLID, entre outras, conforme a necessidade.
