@@ -88,6 +88,19 @@ public class EntitiesParser {
         }
     }
 
+    private void updateDimensionPoints(DxfDimension dimension,
+                                       boolean defRead, double defX, double defY, double defZ,
+                                       boolean midRead, double midX, double midY, double midZ,
+                                       boolean p1Read, double p1X, double p1Y, double p1Z,
+                                       boolean p2Read, double p2X, double p2Y, double p2Z,
+                                       boolean extrusionRead, double extX, double extY, double extZ) {
+        if(defRead) {dimension.setDefinitionPoint(new Point3D(defX, defY, defZ));}
+        if(midRead) {dimension.setMiddleOfTextPoint(new Point3D(midX, midY, midZ));}
+        if(p1Read) {dimension.setLinearPoint1(new Point3D(p1X, p1Y, p1Z));}
+        if(p2Read) {dimension.setLinearPoint2(new Point3D(p2X, p2Y, p2Z));}
+        if(extrusionRead) {dimension.setExtrusionDirection(new Point3D(extX,extY,extZ));}
+    }
+
     public DxfLine parseLineEntity() throws IOException, DxfParserException {
         DxfLine line = new DxfLine();
         double x1=0, y1=0, z1=0; boolean x1Read=false, y1Read=false, z1Read=false;
@@ -379,20 +392,24 @@ public class EntitiesParser {
                 case 220: extY = Double.parseDouble(aktuellenGroupCode.value); extrusionRead=true; break;
                 case 230: extZ = Double.parseDouble(aktuellenGroupCode.value); extrusionRead=true; break;
                 case 1001:
-                    if(defRead) {dimension.setDefinitionPoint(new Point3D(defX, defY, defZ)); defRead=false;}
-                    if(midRead) {dimension.setMiddleOfTextPoint(new Point3D(midX, midY, midZ)); midRead=false;}
-                    if(p1Read) {dimension.setLinearPoint1(new Point3D(p1X, p1Y, p1Z)); p1Read=false;}
-                    if(p2Read) {dimension.setLinearPoint2(new Point3D(p2X, p2Y, p2Z)); p2Read=false;}
-                    if(extrusionRead) {dimension.setExtrusionDirection(new Point3D(extX,extY,extZ)); extrusionRead=false;}
+                    updateDimensionPoints(dimension, defRead, defX, defY, defZ, midRead, midX, midY, midZ, p1Read, p1X, p1Y, p1Z, p2Read, p2X, p2Y, p2Z, extrusionRead, extX, extY, extZ);
+                    // Reset flags after updating, as this is specific to the XDATA/Reactor handling path
+                    if(defRead) defRead=false;
+                    if(midRead) midRead=false;
+                    if(p1Read) p1Read=false;
+                    if(p2Read) p2Read=false;
+                    if(extrusionRead) extrusionRead=false;
                     parseAndAttachXData(dimension);
                     if (aktuellenGroupCode != null && aktuellenGroupCode.code == 0) return dimension;
                     break;
                 case 102:
-                    if(defRead) {dimension.setDefinitionPoint(new Point3D(defX, defY, defZ)); defRead=false;}
-                    if(midRead) {dimension.setMiddleOfTextPoint(new Point3D(midX, midY, midZ)); midRead=false;}
-                    if(p1Read) {dimension.setLinearPoint1(new Point3D(p1X, p1Y, p1Z)); p1Read=false;}
-                    if(p2Read) {dimension.setLinearPoint2(new Point3D(p2X, p2Y, p2Z)); p2Read=false;}
-                    if(extrusionRead) {dimension.setExtrusionDirection(new Point3D(extX,extY,extZ)); extrusionRead=false;}
+                    updateDimensionPoints(dimension, defRead, defX, defY, defZ, midRead, midX, midY, midZ, p1Read, p1X, p1Y, p1Z, p2Read, p2X, p2Y, p2Z, extrusionRead, extX, extY, extZ);
+                    // Reset flags after updating
+                    if(defRead) defRead=false;
+                    if(midRead) midRead=false;
+                    if(p1Read) p1Read=false;
+                    if(p2Read) p2Read=false;
+                    if(extrusionRead) extrusionRead=false;
                     parseAndAttachReactors(dimension);
                     if (aktuellenGroupCode != null && aktuellenGroupCode.code == 0) return dimension;
                     break;
