@@ -55,72 +55,15 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - `[ ] (P5)` **Documentação/API clara para desenvolvimento de plugins.**
 
 ### Interface Gráfica do Usuário (`gui`)
-- `[X]` Criação do Módulo `gui`: Concluído.
-- `[X]` Janela Principal da Aplicação (`MainFrame.java`): Implementada (JFrame básico).
-- `[X]` Menu Básico: Implementado ("Arquivo" > "Sair", "Abrir DXF...").
-- `[X]` Placeholder para Área de Visualização CAD: Adicionado e funcional com renderização SVG.
-- `[X]` Integração da Lógica de Renderização: Concluído (módulo `rendering` conectado ao placeholder da GUI para exibição de DXF como SVG).
-- `[X]` **Interação com o Mouse para Desenho/Seleção:**
-  - *Detalhe:* Implementar listeners de mouse na área de visualização para: (desenho de novas entidades, seleção de entidades existentes, etc.).
-    - *Status: Listeners básicos (mousePressed, mouseDragged, mouseClicked, mouseReleased) adicionados e funcionais. Lógica de estado de ferramenta (`ToolManager`, `ActiveTool`) implementada. Captura de pontos, pré-visualização dinâmica e renderização final para `Line2D` e `Circle2D` implementadas. Detecção de hit para seleção de `Line2D` e `Circle2D` funcional. Seleção de entidades importadas de arquivos DXF (LINE, CIRCLE) também funcional. Feedback visual elaborado (cursores dinâmicos, destaque de seleção) implementado.*
-    - **Próximos Passos (Melhorias):**
-      - `[ ] (P1)` Integrar renderização de entidades desenhadas com conteúdo DXF (desenhar sobre, não substituir).
-      - `[ ] (P3)` Implementar destaque de pré-seleção (hover) para entidades.
-      - `[ ] (P2)` Suporte para seleção múltipla de entidades.
-      - `[ ] (P2)` Desenho de outras entidades (Arco, Polilinha, etc.).
-- `[X]` **Barra de Ferramentas com Ações CAD:**
-  - *Detalhe:* Adicionar uma `JToolBar` ao `MainFrame` com botões para as ações CAD mais comuns (ex: Nova Linha, Novo Círculo, Selecionar, Zoom, Pan). As ações de desenho dependerão da "Interação com o Mouse".
-    - *Status: JToolBar adicionada. `JToggleButtons` com `ButtonGroup` para feedback visual da ferramenta ativa. ActionListeners implementados para botões definirem a ferramenta ativa no `ToolManager`. Funcionalidades de Zoom In/Out (por clique) e Pan (por arrastar) implementadas e conectadas.*
-    - **Próximos Passos (Melhorias):**
-      - `[ ] (P1)` Implementar zoom pela roda do mouse.
-      - `[ ] (P1)` Implementar "Zoom to Extents/Fit".
-      - `[ ] (P3)` Adicionar mais ações/ferramentas à barra conforme necessário.
-- `[X]` **Refatorar GUI para remover dependência do Batik e usar SVG Salamander.**
-  - *Detalhe: Substituído JSVGCanvas (Batik) por SVGPanel (SVG Salamander) para renderização de SVG. Funcionalidades de carregamento de SVG, zoom/pan centrado, e pré-visualização de desenho (linha, círculo) foram reimplementadas. A transformação e pré-visualização são feitas via regeneração da string SVG.*
-- `[ ] (P1)` **Painel de Propriedades de Objetos:**
-  - *Detalhe:* Criar um painel (ex: `JPanel` em um `JSplitPane` com a área de visualização) que exiba as propriedades da(s) entidade(s) selecionada(s) (ex: coordenadas, raio, cor, camada) e permita sua edição.
-- `[ ] (P1)` **Gerenciamento de Camadas (Layers):**
-  - *Detalhe:* Desenvolver um painel ou diálogo para listar as camadas presentes no desenho, permitindo ao usuário criar novas camadas, renomeá-las, definir sua cor, visibilidade, e a camada ativa para desenho.
-- `[~] (P1)` **Refatorar MainFrame para Testabilidade Headless e Melhorar Cobertura de Testes da GUI**
-  - *Detalhe:* Modificar `MainFrame.java` para separar sua lógica central (geração de SVG, gerenciamento de estado de ferramentas, cálculos de zoom/pan) de suas responsabilidades de UI Swing, movendo a lógica para uma classe não-UI. Isso permitirá que a lógica seja testada unitariamente sem `HeadlessException`. Testes unitários para `ToolManager` foram implementados e passam. A estrutura de teste para a lógica de `MainFrame` foi criada, mas os testes estão desabilitados/falhando devido a `HeadlessException` e aguardam esta refatoração.
-- `[ ] (P3)` **Integrar Ciclo de Vida do Módulo GUI com Kernel via ModuleInterface**
-  - *Detalhe:* Utilizar a `ModuleInterface` implementada por `com.cad.gui.MainFrame` para que o `Kernel` (ou `ModuleManager`) possa gerenciar o ciclo de vida do módulo `gui` (chamando `init`, `start`, `stop`, `destroy`).
+- Consulte o arquivo [roadmap_gui.md](roadmap_gui.md) para o roadmap detalhado deste módulo.
 
 ## Manutenção e Melhorias Recentes
 - `[X]` **Correções Diversas e Melhorias de Código:**
   - *Detalhe:* Corrigidas referências de `Point2D.Double` para `java.awt.geom.Point2D.Double` em `CustomCadPanel.java` para evitar ambiguidades. Adicionado método `distanceTo(Point2D other)` em `Point2D.java` (dxflib) para cálculos de distância. Refinada a obtenção de diagramas SVG em `CustomCadPanel.java`, armazenando o nome do diagrama carregado (`currentDiagramName`) e utilizando `svgUniverseFromDxf.getStreamBuiltURI(this.currentDiagramName)` para recuperação precisa do diagrama.
-- `[X]` **Migração da Biblioteca SVG de SVG Salamander para Apache Batik:**
-  - *Detalhe:* Substituída a biblioteca SVG Salamander pela Apache Batik para todas as funcionalidades de parsing e rendering de SVG. Isso incluiu a atualização das dependências Maven nos POMs (`gui/pom.xml`, `modules/rendering/pom.xml`). O `DxfRenderService.java` foi modificado para gerar `org.w3c.dom.svg.SVGDocument` (compatível com Batik) em vez de `SVGUniverse`. O `CustomCadPanel.java` foi refatorado para utilizar os componentes da bridge Batik (`UserAgentAdapter`, `DocumentLoader`, `BridgeContext`, `GVTBuilder`) para carregar e renderizar o `SVGDocument` como um `GraphicsNode` (GVT).
-- `[X]` **Seleção de Entidades DXF Importadas:**
-  - *Detalhe:* Implementada a capacidade de selecionar entidades geométricas (atualmente LINE e CIRCLE) que foram importadas de arquivos DXF. A seleção utiliza a mesma lógica de clique do mouse e tolerância das entidades desenhadas localmente, e as entidades DXF selecionadas são destacadas visualmente na tela (cor magenta, contorno mais espesso). Isso melhora a interatividade com desenhos DXF carregados.
+  - *Nota: Outros itens de manutenção específicos da GUI foram movidos para roadmap_gui.md*
 
 ## Módulo Leitor DXF (dxflib)
-- `[X]` Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
-- `[X]` Análise de Referência (Kabeja - conceitual)
-- `[X]` Criação da Estrutura do Módulo `dxflib` (POM, pacotes)
-- `[X]` Implementação das Estruturas de Dados Base (DxfDocument, DxfEntity, Point2D/3D, etc.)
-- `[X]` Implementação do Parser para Entidades DXF Iniciais (LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, INSERT)
-- `[X]` Adição de Testes Unitários para Entidades Iniciais
-- `[X]` Implementação da Leitura de Tabelas (LAYER) e Seção de Blocos (BLOCK)
-- `[X]` Adição de Testes Unitários para Layers e Blocos
-- `[X]` Implementação do Conversor DXF para SVG (para entidades parseadas)
-- `[X]` Adição de Testes Unitários para o Conversor SVG
+- Consulte o arquivo [roadmap_dxflib.md](roadmap_dxflib.md) para o roadmap detalhado deste módulo.
 
 ## Melhorias Futuras Planejadas
 - `[ ] (P5)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**
-- `[ ] (P1)` **Suporte para Entidade DXF HATCH:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF HATCH.
-- `[ ] (P1)` **Suporte para Entidade DXF DIMENSION:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF DIMENSION.
-- `[ ] (P1)` **Suporte para Entidade DXF SPLINE:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF SPLINE.
-- `[ ] (P1)` **Suporte para Entidade DXF ELLIPSE:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF ELLIPSE.
-- `[ ] (P1)` **Suporte para Entidade DXF MTEXT:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF MTEXT.
-- `[ ] (P1)` **Suporte para Entidade DXF POLYLINE (complexa):**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF POLYLINE (entidade complexa com vértices).
-- `[ ] (P1)` **Suporte para Entidade DXF POINT:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF POINT.
-- `[ ] (P1)` **Suporte para Entidade DXF SOLID:**
-  - *Detalhe:* Estender o `dxflib` para parsear e representar a entidade DXF SOLID, entre outras, conforme a necessidade.
