@@ -5,12 +5,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.List; // Added import
 import java.util.ArrayList; // Added import
+import java.util.List; // Added import
 
 import javax.swing.SwingUtilities; // New import
 // import com.cad.gui.MainFrame; // New import - MainFrame usage is commented out
 
+
+/**
+ * Kernel is the core class of the CAD application, responsible for initializing the system,
+ * managing modules, handling events, and loading plugins.
+ * It serves as the main entry point for the application.
+ */
 public class Kernel {
 
     private java.util.Properties configuration = new java.util.Properties();

@@ -3,13 +3,16 @@ package com.cad.core;
 import com.cad.core.kernel.Kernel;
 
 /**
- * Hello world!
+ * Hello world!.
  *
  */
-public class App 
-{
-    public static void main( String[] args )
-    {
+public class App {
+    /**
+     * Main method to start the application.
+     *
+     * @param args command line arguments
+     */
+    public static void main(String[] args) {
         System.out.println("Hello World!");
         Kernel kernel = new Kernel();
         kernel.loadModules();

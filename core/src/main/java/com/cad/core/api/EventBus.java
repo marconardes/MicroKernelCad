@@ -6,6 +6,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
+/**
+ * EventBus is a simple event bus implementation that allows for the registration of listeners
+ * and the publishing of events to those listeners.
+ *
+ * This class uses generics to allow for type-safe event handling.
+ */
 public class EventBus {
     
 

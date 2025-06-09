@@ -2,6 +2,10 @@ package com.cad.modules.geometry.entities;
 
 import com.cad.dxflib.common.Point2D;
 
+/**
+ * Represents a 2D circle with a center point and radius.
+ * This class can be extended in the future to implement a GeometricEntity interface.
+ */
 public class Circle2D { // Considerar implementar uma interface GeometricEntity no futuro
     private Point2D center;
     private double radius;
