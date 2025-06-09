@@ -16,5 +16,15 @@
       <option name="name" value="JBoss Community repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="sonatype-oss-releases" />
+      <option name="name" value="sonatype-oss-releases" />
+      <option name="url" value="https://oss.sonatype.org/content/repositories/releases/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="freehep-maven" />
+      <option name="name" value="FreeHEP Maven Repository" />
+      <option name="url" value="https://s3.cern.ch/maven/freehep-maven" />
+    </remote-repository>
   </component>
 </project>
