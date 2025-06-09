@@ -86,6 +86,10 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 - `[ ] (P3)` **Integrar Ciclo de Vida do Módulo GUI com Kernel via ModuleInterface**
   - *Detalhe:* Utilizar a `ModuleInterface` implementada por `com.cad.gui.MainFrame` para que o `Kernel` (ou `ModuleManager`) possa gerenciar o ciclo de vida do módulo `gui` (chamando `init`, `start`, `stop`, `destroy`).
 
+## Manutenção e Melhorias Recentes
+- `[X]` **Correções Diversas e Melhorias de Código:**
+  - *Detalhe:* Corrigidas referências de `Point2D.Double` para `java.awt.geom.Point2D.Double` em `CustomCadPanel.java` para evitar ambiguidades. Adicionado método `distanceTo(Point2D other)` em `Point2D.java` (dxflib) para cálculos de distância. Corrigida a forma de obtenção de diagramas SVG da biblioteca SVG Salamander em `CustomCadPanel.java`, utilizando `getURIs()` e `getDiagram()` em vez de `getDiagramMap()`.
+
 ## Módulo Leitor DXF (dxflib)
 - `[X]` Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
 - `[X]` Análise de Referência (Kabeja - conceitual)

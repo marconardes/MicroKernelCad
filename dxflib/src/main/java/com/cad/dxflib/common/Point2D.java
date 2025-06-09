@@ -11,6 +11,12 @@ public class Point2D {
         this.y = y;
     }
 
+    public double distanceTo(Point2D other) {
+        double deltaX = other.x - this.x;
+        double deltaY = other.y - this.y;
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

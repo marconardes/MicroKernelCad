@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 // java.net.URI will be needed for diagram lookup from SVGUniverse
 import java.net.URI;
+import java.util.Iterator;
 
 
 public class CustomCadPanel extends JPanel {
@@ -113,8 +114,8 @@ public class CustomCadPanel extends JPanel {
             viewTransform.translate(translateX, translateY);
             viewTransform.scale(currentScale, currentScale);
             AffineTransform inverseTransform = viewTransform.createInverse();
-            Point2D.Double modelCoords = new Point2D.Double();
-            inverseTransform.transform(new Point2D.Double(screenPoint.x, screenPoint.y), modelCoords);
+            java.awt.geom.Point2D.Double modelCoords = new java.awt.geom.Point2D.Double();
+            inverseTransform.transform(new java.awt.geom.Point2D.Double(screenPoint.x, screenPoint.y), modelCoords);
             return new Point2D(modelCoords.x, modelCoords.y);
         } catch (NoninvertibleTransformException e) {
             e.printStackTrace(); // Should not happen with typical view transforms
@@ -248,9 +249,9 @@ public class CustomCadPanel extends JPanel {
             if (svgUniverseFromDxf != null) {
                 // Try to get the diagram by the name used when loading, or get the first one
                 URI diagramUri = null;
-                if (svgUniverseFromDxf.getDiagramMap().size() > 0) {
-                     // Attempt to get the first diagram loaded if the name isn't fixed/known easily
-                    diagramUri = svgUniverseFromDxf.getDiagramMap().keySet().stream().findFirst().orElse(null);
+                Iterator<URI> uriIter = svgUniverseFromDxf.getURIs();
+                if (uriIter.hasNext()) {
+                    diagramUri = uriIter.next();
                 }
 
                 if (diagramUri != null) {
