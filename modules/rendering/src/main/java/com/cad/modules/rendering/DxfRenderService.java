@@ -6,8 +6,10 @@ import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.converter.DxfToSvgConverter;
 import com.cad.dxflib.converter.SvgConversionOptions;
 
+import com.kitfox.svg.SVGUniverse; // Added for SVG Salamander
+import java.io.StringReader; // Added for SVG Salamander
 import java.io.InputStream;
-import java.io.IOException; // Para fechar o InputStream
+import java.io.IOException;
 
 public class DxfRenderService {
 
@@ -37,5 +39,31 @@ public class DxfRenderService {
                 System.err.println("Erro ao fechar InputStream: " + e.getMessage());
             }
         }
+    }
+
+    public SVGUniverse convertDxfToSvgUniverse(InputStream dxfInputStream, String diagramName) throws DxfParserException, IOException {
+        if (dxfInputStream == null) {
+            throw new IllegalArgumentException("InputStream não pode ser nulo.");
+        }
+        // Generate SVG string first (reusing existing logic)
+        String svgString = convertDxfToSvg(dxfInputStream); // This method already closes the input stream
+
+        if (svgString == null || svgString.isEmpty()) {
+            // Return an empty universe or throw an exception, based on desired behavior
+            return new SVGUniverse();
+        }
+
+        SVGUniverse universe = new SVGUniverse();
+        try {
+            // Parse the SVG string into the SVGUniverse
+            // The second argument to loadSVG is a URI that can be used to reference this diagram later.
+            // It's often set to the original file URI or a unique name.
+            universe.loadSVG(new StringReader(svgString), diagramName);
+        } catch (Exception e) {
+            // Catching a general Exception as loadSVG might throw various things from SVG Salamander's parsing
+            // Or consider re-throwing as a custom exception or DxfParserException if appropriate
+            throw new DxfParserException("Falha ao parsear string SVG para SVGUniverse: " + e.getMessage(), e);
+        }
+        return universe;
     }
 }
