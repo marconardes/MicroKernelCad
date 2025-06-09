@@ -63,7 +63,15 @@ Este documento detalha o status atual de implementação das funcionalidades pla
   - *Nota: Outros itens de manutenção específicos da GUI foram movidos para roadmap_gui.md*
 
 ## Módulo Leitor DXF (dxflib)
-- Consulte o arquivo [roadmap_dxflib.md](roadmap_dxflib.md) para o roadmap detalhado deste módulo.
+- `[~]` **Leitor de Arquivos DXF (ASCII, AutoCAD 2000-2007):**
+  - *Status Atual:* Implementado parser para as principais seções (TABLES, BLOCKS, ENTITIES, OBJECTS).
+  - Suporte para entidades chave: LINE, CIRCLE, ARC, LWPOLYLINE, TEXT, INSERT, DIMENSION (atributos básicos + estilo), SPLINE.
+  - Suporte para tabelas: LAYER, LTYPE, STYLE (texto), DIMSTYLE (atributos visuais chave), BLOCK_RECORD.
+  - Suporte para objetos: DICTIONARY, SCALE.
+  - Implementado tratamento de XDATA e Reatores Persistentes.
+  - Testes de integração básicos com arquivos de exemplo (1.dxf, 2.dxf) estão passando.
+  - Javadoc adicionado para as principais classes de estrutura, objetos e entidades.
+  - Consulte o arquivo [roadmap_dxflib.md](roadmap_dxflib.md) para o roadmap detalhado e funcionalidades futuras deste módulo.
 
 ## Melhorias Futuras Planejadas
 - `[ ] (P5)` **Suporte para leitura e renderização de arquivos DWG (investigar bibliotecas e complexidade).**

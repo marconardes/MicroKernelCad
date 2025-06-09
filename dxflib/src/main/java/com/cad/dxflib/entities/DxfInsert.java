@@ -4,58 +4,108 @@ import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
 import com.cad.dxflib.math.Bounds;
-// import com.cad.dxflib.structure.DxfBlock; // For future, more complex getBounds
-// import com.cad.dxflib.structure.DxfDocument; // For future, more complex getBounds
 
-
+/**
+ * Represents an INSERT entity in a DXF file.
+ * An INSERT entity is an instance of a BLOCK definition, placed at a specific
+ * insertion point, with optional scaling and rotation.
+ */
 public class DxfInsert extends AbstractDxfEntity {
-    private String blockName;       // Group code 2
-    private Point3D insertionPoint; // Group codes 10, 20, 30
-    private double xScale = 1.0;    // Group code 41 (optional, default 1)
-    private double yScale = 1.0;    // Group code 42 (optional, default 1)
-    private double rotationAngle = 0.0; // Group code 50 (optional, default 0)
-    // Column/row count and spacing for MINSERT can be added later
+    private String blockName;       // Name of the block to insert (code 2)
+    private Point3D insertionPoint; // Insertion point (codes 10, 20, 30)
+    private double xScale = 1.0;    // X scale factor (code 41, optional, default 1.0)
+    private double yScale = 1.0;    // Y scale factor (code 42, optional, default 1.0)
+    // Note: Z scale factor (code 43) is also possible but less common for 2D.
+    private double rotationAngle = 0.0; // Rotation angle in degrees (code 50, optional, default 0)
+    // TODO: Add support for MINSERT (multiple inserts in a grid) if needed:
+    // columnCount, rowCount, columnSpacing, rowSpacing.
 
+    /**
+     * Constructs a new DxfInsert.
+     * Initializes insertion point to (0,0,0), scales to 1.0, and rotation angle to 0.0.
+     * The block name must be set separately.
+     */
     public DxfInsert() {
+        super();
         this.insertionPoint = new Point3D(0,0,0);
     }
 
+    /**
+     * Gets the name of the block being inserted.
+     * @return The block name.
+     */
     public String getBlockName() {
         return blockName;
     }
 
+    /**
+     * Sets the name of the block to be inserted.
+     * @param blockName The block name.
+     */
     public void setBlockName(String blockName) {
         this.blockName = blockName;
     }
 
+    /**
+     * Gets the insertion point of the block.
+     * @return The insertion point.
+     */
     public Point3D getInsertionPoint() {
         return insertionPoint;
     }
 
+    /**
+     * Sets the insertion point of the block.
+     * @param insertionPoint The new insertion point. Defaults to (0,0,0) if null.
+     */
     public void setInsertionPoint(Point3D insertionPoint) {
-        this.insertionPoint = insertionPoint;
+        this.insertionPoint = insertionPoint != null ? insertionPoint : new Point3D(0,0,0);
     }
 
+    /**
+     * Gets the X scale factor.
+     * @return The X scale factor.
+     */
     public double getXScale() {
         return xScale;
     }
 
+    /**
+     * Sets the X scale factor.
+     * @param xScale The new X scale factor.
+     */
     public void setXScale(double xScale) {
         this.xScale = xScale;
     }
 
+    /**
+     * Gets the Y scale factor.
+     * @return The Y scale factor.
+     */
     public double getYScale() {
         return yScale;
     }
 
+    /**
+     * Sets the Y scale factor.
+     * @param yScale The new Y scale factor.
+     */
     public void setYScale(double yScale) {
         this.yScale = yScale;
     }
 
+    /**
+     * Gets the rotation angle in degrees.
+     * @return The rotation angle.
+     */
     public double getRotationAngle() {
         return rotationAngle;
     }
 
+    /**
+     * Sets the rotation angle in degrees.
+     * @param rotationAngle The new rotation angle.
+     */
     public void setRotationAngle(double rotationAngle) {
         this.rotationAngle = rotationAngle;
     }
@@ -65,41 +115,26 @@ public class DxfInsert extends AbstractDxfEntity {
         return EntityType.INSERT;
     }
 
+    /**
+     * Calculates an approximate bounding box for the INSERT entity.
+     * Currently, this returns a simple bounds around the insertion point or an invalid one
+     * if the insertion point is null.
+     * <p>
+     * A more accurate calculation would require resolving the referenced {@link com.cad.dxflib.structure.DxfBlock}
+     * definition, getting its bounds, and then transforming those bounds by the INSERT's
+     * scale, rotation, and insertion point. This is a complex operation not yet implemented.
+     * </p>
+     * @return A {@link Bounds} object. Currently, it's a point or invalid.
+     */
     @Override
     public Bounds getBounds() {
-        // TODO: This is a complex calculation.
-        // It requires resolving the block definition, then transforming the bounds
-        // of each entity within the block by the insert's scale, rotation, and position.
-        // For now, return a simple bounds around the insertion point or an invalid one.
         Bounds bounds = new Bounds();
         if (this.insertionPoint != null) {
              bounds.addToBounds(this.insertionPoint);
         }
-        // A more accurate (but still simplified) version might consider the block's own bounds
-        // and transform that. But block bounds themselves need to be calculated.
-        // Example:
-        // if (this.document != null && this.blockName != null) { // document field would need to be added
-        //     DxfBlock block = this.document.getBlock(this.blockName);
-        //     if (block != null) {
-        //         Bounds blockBounds = block.getBounds(); // Requires DxfBlock to have getBounds()
-        //         if (blockBounds.isValid()) {
-        //             // This is still simplified as it doesn't account for rotation of the block bounds
-        //             Point3D min = new Point3D(
-        //                 insertionPoint.x + blockBounds.getMinX() * xScale,
-        //                 insertionPoint.y + blockBounds.getMinY() * yScale,
-        //                 insertionPoint.z + blockBounds.getMinZ() // Assuming no zScale for now
-        //             );
-        //             Point3D max = new Point3D(
-        //                 insertionPoint.x + blockBounds.getMaxX() * xScale,
-        //                 insertionPoint.y + blockBounds.getMaxY() * yScale,
-        //                 insertionPoint.z + blockBounds.getMaxZ()
-        //             );
-        //             bounds.addToBounds(min);
-        //             bounds.addToBounds(max);
-        //         }
-        //     }
-        // }
-        return bounds;
+        // TODO: Implement full bounds calculation by transforming the referenced block's bounds.
+        // This requires access to the DxfDocument to resolve the blockName.
+        return bounds.isValid() ? bounds : null;
     }
 
     @Override
