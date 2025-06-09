@@ -3,6 +3,7 @@ package com.cad.dxflib.entities;
 import com.cad.dxflib.common.AbstractDxfEntity;
 import com.cad.dxflib.common.EntityType;
 import com.cad.dxflib.common.Point3D;
+import com.cad.dxflib.math.Bounds; // Import for Bounds
 
 public class DxfDimension extends AbstractDxfEntity {
 
@@ -113,6 +114,36 @@ public class DxfDimension extends AbstractDxfEntity {
        return (this.dimensionTypeFlags & 32) == 32;
     }
 
+    @Override
+    public Bounds getBounds() {
+        Bounds bounds = new Bounds();
+        // If the dimension is block-referenced, its true bounds are within that block.
+        // This is a simplified approach using available points in this entity.
+        // A more accurate approach would involve parsing the block entities if blockName is present.
+
+        if (definitionPoint != null) {
+            bounds.addToBounds(definitionPoint);
+        }
+        if (middleOfTextPoint != null) {
+            bounds.addToBounds(middleOfTextPoint);
+        }
+
+        // For linear/aligned dimensions, include the definition points of the extension lines
+        if (isAlignedDimension() || (dimensionTypeFlags & 0x07) == 0 || (dimensionTypeFlags & 0x07) == 1) { // 0 = Rotated, 1 = Aligned
+            if (definitionPoint1 != null) {
+                bounds.addToBounds(definitionPoint1);
+            }
+            if (definitionPoint2 != null) {
+                bounds.addToBounds(definitionPoint2);
+            }
+        }
+
+        // If no points were valid or it's a type without easily accessible geometry points here,
+        // bounds might still be invalid.
+        // For a truly minimal implementation, if no points are relevant:
+        // if (!bounds.isValid()) { return new Bounds(); // or specific logic }
+        return bounds;
+    }
 
     @Override
     public String toString() {
