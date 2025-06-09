@@ -6,10 +6,13 @@ import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.converter.DxfToSvgConverter;
 import com.cad.dxflib.converter.SvgConversionOptions;
 
-import com.kitfox.svg.SVGUniverse; // Added for SVG Salamander
-import java.io.StringReader; // Added for SVG Salamander
+import org.w3c.dom.svg.SVGDocument;
+import org.apache.batik.parser.SAXSVGDocumentFactory;
+import org.apache.batik.util.XMLResourceDescriptor;
+import java.io.StringReader;
 import java.io.InputStream;
 import java.io.IOException;
+// Note: org.xml.sax.InputSource might not be needed, StringReader usually suffices.
 
 public class DxfRenderService {
 
@@ -41,29 +44,30 @@ public class DxfRenderService {
         }
     }
 
-    public SVGUniverse convertDxfToSvgUniverse(InputStream dxfInputStream, String diagramName) throws DxfParserException, IOException {
+    public org.w3c.dom.svg.SVGDocument convertDxfToBatikDocument(InputStream dxfInputStream, String diagramName) throws DxfParserException, IOException {
         if (dxfInputStream == null) {
             throw new IllegalArgumentException("InputStream não pode ser nulo.");
         }
         // Generate SVG string first (reusing existing logic)
-        String svgString = convertDxfToSvg(dxfInputStream); // This method already closes the input stream
+        // The convertDxfToSvg method is responsible for closing the dxfInputStream
+        String svgString = convertDxfToSvg(dxfInputStream);
 
         if (svgString == null || svgString.isEmpty()) {
-            // Return an empty universe or throw an exception, based on desired behavior
-            return new SVGUniverse();
+            // Return null or throw an exception, based on desired behavior.
+            // For now, returning null as per instruction.
+            return null;
         }
 
-        SVGUniverse universe = new SVGUniverse();
         try {
-            // Parse the SVG string into the SVGUniverse
-            // The second argument to loadSVG is a URI that can be used to reference this diagram later.
-            // It's often set to the original file URI or a unique name.
-            universe.loadSVG(new StringReader(svgString), diagramName);
-        } catch (Exception e) {
-            // Catching a general Exception as loadSVG might throw various things from SVG Salamander's parsing
-            // Or consider re-throwing as a custom exception or DxfParserException if appropriate
-            throw new DxfParserException("Falha ao parsear string SVG para SVGUniverse: " + e.getMessage(), e);
+            String parser = XMLResourceDescriptor.getXMLParserClassName();
+            SAXSVGDocumentFactory factory = new SAXSVGDocumentFactory(parser);
+            // Create a synthetic URI for the document. This helps in resolving relative URIs if any,
+            // though less common for generated SVGs like this.
+            String syntheticDocumentURI = "dxf2svg://" + (diagramName != null ? diagramName : "untitled.svg");
+            SVGDocument doc = factory.createSVGDocument(syntheticDocumentURI, new StringReader(svgString));
+            return doc;
+        } catch (Exception e) { // Catch general exception as various things can go wrong during parsing
+            throw new DxfParserException("Falha ao parsear string SVG para SVGDocument Batik: " + e.getMessage(), e);
         }
-        return universe;
     }
 }

@@ -7,9 +7,14 @@ import com.cad.modules.geometry.entities.Circle2D;
 import com.cad.modules.geometry.entities.Line2D;
 import com.cad.modules.rendering.DxfRenderService;
 import com.cad.dxflib.parser.DxfParserException; // Added for loadDxfFromFile
-import com.kitfox.svg.SVGDiagram; // Added for SVG Salamander rendering
-import com.kitfox.svg.SVGUniverse; // Added for SVG Salamander rendering
 
+// Apache Batik Imports
+import org.w3c.dom.svg.SVGDocument;
+import org.apache.batik.bridge.UserAgentAdapter;
+import org.apache.batik.bridge.DocumentLoader;
+import org.apache.batik.bridge.BridgeContext;
+import org.apache.batik.bridge.GVTBuilder;
+import org.apache.batik.gvt.GraphicsNode;
 
 import javax.swing.*;
 import java.awt.*;
@@ -22,9 +27,8 @@ import java.io.FileInputStream; // Added for loadDxfFromFile
 import java.io.IOException; // Added for loadDxfFromFile
 import java.util.ArrayList;
 import java.util.List;
-// java.net.URI will be needed for diagram lookup from SVGUniverse
-import java.net.URI;
-import java.util.Iterator;
+// import java.net.URI; // No longer directly used in this class
+// import java.util.Iterator; // No longer directly used in this class
 
 
 public class CustomCadPanel extends JPanel {
@@ -38,14 +42,19 @@ public class CustomCadPanel extends JPanel {
     private Point2D previewEndPoint;
     private Point2D circleCenterPoint;
     private double previewRadius;
-    // private String baseSvgContent; // Changed to SVGUniverse
-    private SVGUniverse svgUniverseFromDxf; // Changed field type
+    private org.w3c.dom.svg.SVGDocument svgDocument; // Batik document
     private double currentScale;
     private double translateX;
     private double translateY;
     private Point2D panLastMousePosition;
     private static final double HIT_TOLERANCE = 5.0;
-    private String currentDiagramName;
+
+    // Batik bridge components
+    private UserAgentAdapter userAgentAdapter;
+    private DocumentLoader documentLoader;
+    private GVTBuilder gvtBuilder;
+    private BridgeContext bridgeContext;
+    private GraphicsNode gvtRoot; // To store the built GVT tree
 
     public CustomCadPanel(ToolManager toolManager, DxfRenderService dxfRenderService) {
         this.toolManager = toolManager;
@@ -55,8 +64,16 @@ public class CustomCadPanel extends JPanel {
         this.currentScale = 1.0;
         this.translateX = 0.0;
         this.translateY = 0.0;
-        // this.baseSvgContent = "<svg width=\"800\" height=\"600\" xmlns=\"http://www.w3.org/2000/svg\"></svg>"; // Default empty SVG
-        this.svgUniverseFromDxf = null; // Initialize new field
+
+        // Initialize Batik components
+        this.userAgentAdapter = new UserAgentAdapter();
+        this.documentLoader = new DocumentLoader(userAgentAdapter);
+        this.gvtBuilder = new GVTBuilder();
+        this.bridgeContext = new BridgeContext(userAgentAdapter, documentLoader);
+        this.bridgeContext.setDynamicState(BridgeContext.DYNAMIC); // For dynamic updates
+
+        this.svgDocument = null;
+        this.gvtRoot = null;
 
         // Mouse listeners are added in MainFrame
     }
@@ -81,32 +98,32 @@ public class CustomCadPanel extends JPanel {
         selectedEntity = null;
         clearPreviewLineState();
         clearPreviewCircleState();
-        this.svgUniverseFromDxf = null; // Clear previous DXF content
-        this.currentDiagramName = null; // Reset diagram name
+        this.svgDocument = null; // Clear previous document
+        this.gvtRoot = null;     // Clear previous GVT tree
 
         if (file == null || !file.exists()) {
-            // Optionally, load an empty universe or a universe with an error message
-            this.svgUniverseFromDxf = new SVGUniverse();
-            // You could add a text element to the universe indicating the error
             System.err.println("File not found or null: " + (file != null ? file.getAbsolutePath() : "null"));
             repaint();
             return;
         }
 
         try (FileInputStream fis = new FileInputStream(file)) {
-            // Use a unique name for the diagram, e.g., based on the file name
-            this.currentDiagramName = file.getName(); // Store diagram name
-            this.svgUniverseFromDxf = dxfRenderService.convertDxfToSvgUniverse(fis, this.currentDiagramName);
+            // The diagramName for convertDxfToBatikDocument is used for synthetic URI in Batik
+            String diagramName = file.getName();
+            this.svgDocument = dxfRenderService.convertDxfToBatikDocument(fis, diagramName);
+
+            if (this.svgDocument != null) {
+                this.gvtRoot = gvtBuilder.build(bridgeContext, this.svgDocument);
+            } else {
+                this.gvtRoot = null; // Document was not loaded or parsed correctly
+            }
         } catch (IOException | DxfParserException e) {
             e.printStackTrace();
-            // Optionally, display an error message in the panel
-            // For now, just reset the universe
-            this.svgUniverseFromDxf = new SVGUniverse();
-            this.currentDiagramName = null; // Reset diagram name on error
-            // Example: create a text element showing error
-            // com.kitfox.svg.elements.Text errorText = new com.kitfox.svg.elements.Text();
-            // errorText.appendText("Error loading DXF: " + e.getMessage());
-            // ... add to a diagram in svgUniverseFromDxf ...
+            this.svgDocument = null; // Ensure clean state on error
+            this.gvtRoot = null;
+        } catch (Exception e) { // Catch other Batik-specific exceptions during GVT build
+            e.printStackTrace();
+            this.gvtRoot = null; // Failed to build GVT
         }
         repaint();
     }
@@ -248,33 +265,16 @@ public class CustomCadPanel extends JPanel {
             g2d.translate(translateX, translateY);
             g2d.scale(currentScale, currentScale);
 
-            // Render DXF content from SVGUniverse
-            if (svgUniverseFromDxf != null) {
-                URI diagramUri = null;
-                if (this.currentDiagramName != null) {
-                    // Ensure the universe has loaded this diagram by its name (which acts as a stream URI part)
-                    // Note: SVGUniverse.getStreamBuiltURI might not be the correct method
-                    // if the diagramName wasn't used in a way that SVGUniverse recognizes for this.
-                    // The DxfRenderService.convertDxfToSvgUniverse uses diagramName when calling universe.loadSVG(is, name).
-                    // This name is then usable with universe.getDiagram(universe.getStreamBuiltURI(name))
-                    // or directly if the string name itself is treated as the URI internally by some methods.
-                    // Let's assume getStreamBuiltURI is the intended way to retrieve it.
-                    diagramUri = svgUniverseFromDxf.getStreamBuiltURI(this.currentDiagramName);
-                }
+            // Render DXF content using Batik
+            if (this.gvtRoot != null) {
+                try {
+                    // Optional: Set rendering hints for quality if Batik doesn't handle them internally via SVG
+                    // g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); // Already set earlier
+                    // g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                if (diagramUri != null) {
-                    SVGDiagram diagram = svgUniverseFromDxf.getDiagram(diagramUri);
-                    if (diagram != null) {
-                        try {
-                            // Set rendering hints for SVG if needed, though some might be ignored
-                            // g2d.setRenderingHint(SVGConstants.KEY_STROKE_CONTROL, SVGConstants.VALUE_STROKE_PURE);
-                            // g2d.setRenderingHint(SVGConstants.KEY_TEXT_RENDERING, SVGConstants.VALUE_TEXT_RENDERING_OPTIMIZE_LEGIBILITY);
-
-                            diagram.render(g2d);
-                        } catch (Exception e) {
-                            e.printStackTrace(); // Log rendering errors
-                        }
-                    }
+                    this.gvtRoot.paint(g2d);
+                } catch (Exception e) {
+                    e.printStackTrace(); // Log rendering errors
                 }
             }
 

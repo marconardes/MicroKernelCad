@@ -89,6 +89,8 @@ Este documento detalha o status atual de implementação das funcionalidades pla
 ## Manutenção e Melhorias Recentes
 - `[X]` **Correções Diversas e Melhorias de Código:**
   - *Detalhe:* Corrigidas referências de `Point2D.Double` para `java.awt.geom.Point2D.Double` em `CustomCadPanel.java` para evitar ambiguidades. Adicionado método `distanceTo(Point2D other)` em `Point2D.java` (dxflib) para cálculos de distância. Refinada a obtenção de diagramas SVG em `CustomCadPanel.java`, armazenando o nome do diagrama carregado (`currentDiagramName`) e utilizando `svgUniverseFromDxf.getStreamBuiltURI(this.currentDiagramName)` para recuperação precisa do diagrama.
+- `[X]` **Migração da Biblioteca SVG de SVG Salamander para Apache Batik:**
+  - *Detalhe:* Substituída a biblioteca SVG Salamander pela Apache Batik para todas as funcionalidades de parsing e rendering de SVG. Isso incluiu a atualização das dependências Maven nos POMs (`gui/pom.xml`, `modules/rendering/pom.xml`). O `DxfRenderService.java` foi modificado para gerar `org.w3c.dom.svg.SVGDocument` (compatível com Batik) em vez de `SVGUniverse`. O `CustomCadPanel.java` foi refatorado para utilizar os componentes da bridge Batik (`UserAgentAdapter`, `DocumentLoader`, `BridgeContext`, `GVTBuilder`) para carregar e renderizar o `SVGDocument` como um `GraphicsNode` (GVT).
 
 ## Módulo Leitor DXF (dxflib)
 - `[X]` Definição do Escopo Inicial (Entidades DXF, Versão ASCII, AutoCAD 2000/2004, Layers/Cores)
