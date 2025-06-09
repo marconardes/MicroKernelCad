@@ -1,12 +1,16 @@
 package com.cad.gui;
 
 import com.cad.dxflib.common.Point2D;
+import com.cad.dxflib.common.DxfEntity; // Added import
 import com.cad.gui.tool.ActiveTool;
 import com.cad.gui.tool.ToolManager;
 import com.cad.modules.geometry.entities.Circle2D;
 import com.cad.modules.geometry.entities.Line2D;
 import com.cad.modules.rendering.DxfRenderService;
+import com.cad.modules.rendering.DxfProcessingResult; // Added import
 import com.cad.dxflib.parser.DxfParserException; // Added for loadDxfFromFile
+import com.cad.dxflib.entities.DxfLine; // Added import for DXF entity types
+import com.cad.dxflib.entities.DxfCircle; // Added import for DXF entity types
 
 // Apache Batik Imports
 import org.w3c.dom.svg.SVGDocument;
@@ -37,6 +41,7 @@ public class CustomCadPanel extends JPanel {
     private ToolManager toolManager;
     private List<Line2D> drawnLines;
     private List<Circle2D> drawnCircles;
+    private List<DxfEntity> importedDxfEntities = new ArrayList<>(); // Added field
     private Object selectedEntity;
     private Point2D lineStartPoint;
     private Point2D previewEndPoint;
@@ -93,8 +98,9 @@ public class CustomCadPanel extends JPanel {
     public void loadDxfFromFile(File file) {
         // For now, just clear lists and store base content
         // In the future, this will parse the DXF and prepare it for rendering
-        drawnLines.clear();
-        drawnCircles.clear();
+        drawnLines.clear(); // Removed duplicate clear
+        drawnCircles.clear(); // Keep this
+        this.importedDxfEntities.clear(); // Clear imported entities
         selectedEntity = null;
         clearPreviewLineState();
         clearPreviewCircleState();
@@ -108,25 +114,49 @@ public class CustomCadPanel extends JPanel {
         }
 
         try (FileInputStream fis = new FileInputStream(file)) {
-            // The diagramName for convertDxfToBatikDocument is used for synthetic URI in Batik
             String diagramName = file.getName();
-            this.svgDocument = dxfRenderService.convertDxfToBatikDocument(fis, diagramName);
+            // Call the new loadDxf method
+            DxfProcessingResult result = dxfRenderService.loadDxf(fis, diagramName);
 
-            if (this.svgDocument != null) {
-                this.gvtRoot = gvtBuilder.build(bridgeContext, this.svgDocument);
+            if (result != null) {
+                this.svgDocument = result.batikDocument; // Set SVG document from result
+                if (result.dxfDocument != null && result.dxfDocument.getModelSpaceEntities() != null) {
+                    this.importedDxfEntities.addAll(result.dxfDocument.getModelSpaceEntities());
+                }
+
+                // Build GVT tree if batikDocument is available
+                if (this.svgDocument != null) {
+                    this.gvtRoot = gvtBuilder.build(bridgeContext, this.svgDocument);
+                } else {
+                    this.gvtRoot = null; // No Batik document to build GVT from
+                    // Potentially log that DXF was loaded but SVG part is missing/empty
+                    System.out.println("DXF loaded, but no Batik SVGDocument was generated for: " + diagramName);
+                }
             } else {
-                this.gvtRoot = null; // Document was not loaded or parsed correctly
+                // This case should ideally not happen if loadDxf throws exceptions on failure
+                // or returns a result with null fields.
+                this.svgDocument = null;
+                this.gvtRoot = null;
+                System.err.println("DXF processing result was null for: " + diagramName);
             }
-        } catch (IOException | DxfParserException e) {
+        } catch (IOException | DxfParserException e) { // DxfRenderService.loadDxf can throw these
             e.printStackTrace();
             this.svgDocument = null; // Ensure clean state on error
             this.gvtRoot = null;
-        } catch (Exception e) { // Catch other Batik-specific exceptions during GVT build
+            this.importedDxfEntities.clear(); // Also clear entities on error
+        } catch (Exception e) { // Catch other Batik-specific exceptions during GVT build or other unexpected issues
             e.printStackTrace();
-            this.gvtRoot = null; // Failed to build GVT
+            this.svgDocument = null; // Ensure clean state on error
+            this.gvtRoot = null;
+            this.importedDxfEntities.clear(); // Also clear entities on error
         }
         repaint();
     }
+
+    // Consider adding a method to get importedDxfEntities if needed externally
+    // public List<DxfEntity> getImportedDxfEntities() {
+    //     return importedDxfEntities;
+    // }
 
     private Point2D screenToModel(Point2D screenPoint) {
         try {
@@ -142,6 +172,40 @@ public class CustomCadPanel extends JPanel {
             // Fallback to screen coordinates, though incorrect for transformed views
             return screenPoint;
         }
+    }
+
+    public boolean isPointNearDxfLine(Point2D point, com.cad.dxflib.entities.DxfLine dxfLine, double tolerance) {
+        com.cad.dxflib.common.Point3D dxfStart = dxfLine.getStartPoint();
+        com.cad.dxflib.common.Point3D dxfEnd = dxfLine.getEndPoint();
+
+        // Using dxflib.common.Point2D for calculations to match existing logic style
+        Point2D p1 = new Point2D(dxfStart.x, dxfStart.y);
+        Point2D p2 = new Point2D(dxfEnd.x, dxfEnd.y);
+        double px = point.x;
+        double py = point.y;
+
+        double lenSq = (p2.x - p1.x) * (p2.x - p1.x) + (p2.y - p1.y) * (p2.y - p1.y);
+        if (lenSq == 0) { // Line is a point
+            return point.distanceTo(p1) <= tolerance;
+        }
+
+        double t = ((px - p1.x) * (p2.x - p1.x) + (py - p1.y) * (p2.y - p1.y)) / lenSq;
+        t = Math.max(0, Math.min(1, t)); // Clamp t to the range [0, 1]
+
+        double closestX = p1.x + t * (p2.x - p1.x);
+        double closestY = p1.y + t * (p2.y - p1.y);
+        Point2D closestPoint = new Point2D(closestX, closestY);
+
+        return point.distanceTo(closestPoint) <= tolerance;
+    }
+
+    public boolean isPointNearDxfCircle(Point2D point, com.cad.dxflib.entities.DxfCircle dxfCircle, double tolerance) {
+        com.cad.dxflib.common.Point3D dxfCenter = dxfCircle.getCenter();
+        Point2D center = new Point2D(dxfCenter.x, dxfCenter.y);
+        double radius = dxfCircle.getRadius();
+
+        double distToCenter = point.distanceTo(center);
+        return Math.abs(distToCenter - radius) <= tolerance;
     }
 
     public void handleMousePress(Point2D screenPoint) {
@@ -164,6 +228,23 @@ public class CustomCadPanel extends JPanel {
                         selectedEntity = circle;
                         break;
                     }
+                }
+            }
+
+            if (selectedEntity == null) { // Check imported DXF entities if no drawn entity was selected
+                for (DxfEntity entity : importedDxfEntities) {
+                    if (entity instanceof com.cad.dxflib.entities.DxfLine) {
+                        if (isPointNearDxfLine(modelPoint, (com.cad.dxflib.entities.DxfLine) entity, HIT_TOLERANCE / currentScale)) {
+                            selectedEntity = entity;
+                            break;
+                        }
+                    } else if (entity instanceof com.cad.dxflib.entities.DxfCircle) {
+                        if (isPointNearDxfCircle(modelPoint, (com.cad.dxflib.entities.DxfCircle) entity, HIT_TOLERANCE / currentScale)) {
+                            selectedEntity = entity;
+                            break;
+                        }
+                    }
+                    // Future: Add support for other DxfEntity types like DxfArc, DxfLwPolyline
                 }
             }
         } else if (activeTool == ActiveTool.DRAW_LINE) {
@@ -314,6 +395,35 @@ public class CustomCadPanel extends JPanel {
                             (int) (2 * previewRadius),
                             (int) (2 * previewRadius), 0, 360);
             }
+
+            // Highlight selected imported DXF entities
+            if (selectedEntity instanceof com.cad.dxflib.entities.DxfLine) {
+                com.cad.dxflib.entities.DxfLine dxfLine = (com.cad.dxflib.entities.DxfLine) selectedEntity;
+                com.cad.dxflib.common.Point3D start = dxfLine.getStartPoint();
+                com.cad.dxflib.common.Point3D end = dxfLine.getEndPoint();
+
+                g2d.setColor(Color.MAGENTA); // Highlight color for selected DXF entities
+                g2d.setStroke(new BasicStroke(3)); // Thicker stroke for highlight
+                g2d.drawLine((int) start.x, (int) start.y, (int) end.x, (int) end.y);
+
+            } else if (selectedEntity instanceof com.cad.dxflib.entities.DxfCircle) {
+                com.cad.dxflib.entities.DxfCircle dxfCircle = (com.cad.dxflib.entities.DxfCircle) selectedEntity;
+                com.cad.dxflib.common.Point3D center = dxfCircle.getCenter();
+                double radius = dxfCircle.getRadius();
+
+                g2d.setColor(Color.MAGENTA); // Highlight color
+                g2d.setStroke(new BasicStroke(3)); // Thicker stroke
+                g2d.drawArc(
+                    (int) (center.x - radius),
+                    (int) (center.y - radius),
+                    (int) (2 * radius),
+                    (int) (2 * radius),
+                    0, 360
+                );
+            }
+            // Reset stroke to default if other drawing operations were to follow
+            // g2d.setStroke(new BasicStroke(1));
+
         } finally {
             g2d.dispose(); // Release resources of the copied Graphics context
         }
