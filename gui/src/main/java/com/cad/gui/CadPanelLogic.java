@@ -7,6 +7,7 @@ import com.cad.gui.tool.ToolManager;
 import com.cad.modules.geometry.entities.Circle2D;
 import com.cad.modules.geometry.entities.Line2D;
 import com.cad.modules.rendering.DxfRenderService;
+import com.cad.modules.rendering.DxfProcessingResult; // Added import
 
 import javax.swing.*; // Required for JOptionPane in loadDxfFromFile
 import java.io.File;
@@ -81,7 +82,19 @@ public class CadPanelLogic {
         panLastMousePosition = null;
 
         try (FileInputStream fis = new FileInputStream(fileToOpen)) {
-            baseSvgContent = dxfRenderService.convertDxfToSvg(fis);
+            DxfProcessingResult result = dxfRenderService.loadDxf(fis, fileToOpen.getName());
+            if (result != null) {
+                baseSvgContent = result.svgString;
+                // Potentially, if CadPanelLogic needs to be aware of the DxfDocument for other reasons:
+                // DxfDocument dxfDocument = result.dxfDocument;
+                // For now, we only need baseSvgContent based on the error.
+            } else {
+                // Handle case where result might be null, though loadDxf should throw exceptions
+                baseSvgContent = null;
+                // Consider logging an error or showing a message
+                System.err.println("Falha ao processar DXF: resultado nulo de dxfRenderService.loadDxf");
+                JOptionPane.showMessageDialog(null, "Falha ao processar o arquivo DXF: resultado nulo.", "Erro de DXF", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (FileNotFoundException ex) {
             System.err.println("Arquivo não encontrado: " + ex.getMessage());
             JOptionPane.showMessageDialog(null, "Arquivo não encontrado: " + fileToOpen.getAbsolutePath(), "Erro ao Abrir Arquivo", JOptionPane.ERROR_MESSAGE);
@@ -90,9 +103,9 @@ public class CadPanelLogic {
             System.err.println("Erro ao parsear DXF: " + ex.getMessage());
             JOptionPane.showMessageDialog(null, "Erro ao processar o arquivo DXF: " + ex.getMessage(), "Erro de DXF", JOptionPane.ERROR_MESSAGE);
             baseSvgContent = null;
-        } catch (IOException ex) {
-            System.err.println("Erro de I/O: " + ex.getMessage());
-            JOptionPane.showMessageDialog(null, "Erro de leitura/escrita: " + ex.getMessage(), "Erro de I/O", JOptionPane.ERROR_MESSAGE);
+        } catch (IOException ex) { // Covers DxfParserException as well if it's an IOException subclass, but specific catch is good.
+            System.err.println("Erro de I/O ou ao parsear DXF: " + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Erro de I/O ou ao processar o arquivo DXF: " + ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
             baseSvgContent = null;
         }
     }

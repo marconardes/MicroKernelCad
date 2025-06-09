@@ -67,8 +67,8 @@ public class DxfRenderService {
                 logger.warn("SVG string is null or empty for diagram: {}. DXF Document might be valid but contain no renderable entities.", diagramName);
             }
 
-            // Return the result containing both DxfDocument and potentially null SVGDocument
-            return new DxfProcessingResult(dxfDoc, batikDoc);
+            // Return the result containing DxfDocument, potentially null SVGDocument, and the SVG string
+            return new DxfProcessingResult(dxfDoc, batikDoc, svgString);
 
         } finally {
             // Ensure the input stream is closed in all cases
