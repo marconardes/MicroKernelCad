@@ -10,12 +10,17 @@ import com.cad.dxflib.entities.DxfDimension;
 import com.cad.dxflib.entities.DxfInsert;
 import com.cad.dxflib.entities.DxfLine;
 import com.cad.dxflib.entities.DxfLwPolyline;
+import com.cad.dxflib.entities.DxfSpline; // Added DxfSpline import
 import com.cad.dxflib.entities.DxfText;
 import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfDimStyle; // NOVA ADIÇÃO
 import com.cad.dxflib.structure.DxfDocument;
 import com.cad.dxflib.structure.DxfLayer;
 import com.cad.dxflib.structure.DxfLinetype; // Added
+import com.cad.dxflib.structure.DxfTextStyle; // Added DxfTextStyle import
+import com.cad.dxflib.structure.DxfBlockRecord; // Added DxfBlockRecord import
+import com.cad.dxflib.objects.DxfDictionary; // Added DxfDictionary import
+import com.cad.dxflib.objects.DxfScale; // Added DxfScale import
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +58,8 @@ public class DxfParser {
                             parseTablesSection(); // Updated call
                         } else if ("BLOCKS".equals(currentSection)) {
                             parseBlocksSection();
+                        } else if ("OBJECTS".equals(currentSection)) { // Added OBJECTS section
+                            parseObjectsSection();
                         } else {
                             consumeSection();
                         }
@@ -65,6 +72,171 @@ public class DxfParser {
                 } else {
                     aktuellenGroupCode = nextGroupCode();
                 }
+
+    private void parseObjectsSection() throws IOException, DxfParserException {
+        aktuellenGroupCode = nextGroupCode(); // Should be the first 0/ObjectType or 0/ENDSEC
+        while (aktuellenGroupCode != null) {
+            if (aktuellenGroupCode.code == 0) {
+                if ("ENDSEC".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    aktuellenGroupCode = nextGroupCode(); // Consume ENDSEC
+                    currentSection = null;
+                    return;
+                }
+
+                String objectType = aktuellenGroupCode.value.toUpperCase(Locale.ROOT);
+                if ("DICTIONARY".equalsIgnoreCase(objectType)) {
+                    parseDictionaryObject();
+                    // parseDictionaryObject consumes its codes and positions
+                    // aktuellenGroupCode to the next 0/ObjectType or 0/ENDSEC
+                } else if ("SCALE".equalsIgnoreCase(objectType)) {
+                    parseScaleObject();
+                }
+                // Add other specific object parsers here
+                else {
+                    // System.out.println("Found unknown object type: " + objectType + ", consuming generically.");
+                    consumeGenericObject(objectType);
+                }
+            } else {
+                // This state should not be reached if objects are parsed correctly.
+                throw new DxfParserException("Unexpected non-zero group code " + aktuellenGroupCode + " at start of object in OBJECTS section.");
+            }
+        }
+        throw new DxfParserException("Premature EOF in OBJECTS section.");
+    }
+
+    private DxfDictionary parseDictionaryObject() throws IOException, DxfParserException {
+        DxfDictionary dict = new DxfDictionary();
+        String currentEntryName = null;
+
+        // The first code after 0/DICTIONARY is usually its handle (5) or subclass marker (100)
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                case 5: // Handle of the dictionary itself
+                    dict.setHandle(aktuellenGroupCode.value);
+                    break;
+                case 100: // Subclass marker (e.g., AcDbDictionary)
+                    // Can be used for validation if needed: if (!"AcDbDictionary".equals(aktuellenGroupCode.value)) { throw... }
+                    break;
+                case 280: // Cloning flag
+                    dict.setCloningFlag(Integer.parseInt(aktuellenGroupCode.value));
+                    break;
+                case 281: // Hard owner flag
+                    dict.setHardOwner("1".equals(aktuellenGroupCode.value));
+                    break;
+                case 330: // Owner handle
+                    dict.setOwnerHandle(aktuellenGroupCode.value);
+                    break;
+                case 3: // Entry name
+                    currentEntryName = aktuellenGroupCode.value;
+                    break;
+                case 350: // Entry object handle (common)
+                case 360: // Entry object handle (for some specific objects like MLSTYLE)
+                case 340: // Entry object handle (less common for dictionary entries, but possible)
+                    if (currentEntryName != null) {
+                        dict.addEntry(currentEntryName, aktuellenGroupCode.value);
+                        currentEntryName = null; // Reset for the next entry
+                    } else {
+                        throw new DxfParserException("Dictionary entry handle " + aktuellenGroupCode.value + " found without preceding name (code 3).");
+                    }
+                    break;
+                default:
+                    // System.out.println("Unhandled group code for DICTIONARY: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    break;
+            }
+        }
+
+        if (dict.getHandle() == null) {
+            // While DXF spec allows anonymous dictionaries in some contexts (not typical for named objects dict),
+            // we generally expect a handle for dictionaries managed in the OBJECTS section.
+            // For now, we'll log or throw if a dictionary in OBJECTS section has no handle.
+            // A handle might be assigned by AutoCAD if not present, but we need it for storage.
+             System.err.println("Warning: Parsed a DICTIONARY object without a handle (code 5).");
+            // Potentially, we could generate a temporary handle if strictly needed for internal map storage,
+            // but it's better if the DXF provides it.
+        }
+
+        // Add to document's generic objects map by its handle.
+        // Specific named dictionaries (like ACAD_SCALELIST) might be put into document.dictionaries by name
+        // if their name is known from a higher-level reference (e.g. header variable).
+        // For now, all dictionaries parsed here are added by their handle.
+        if (dict.getHandle() != null) {
+             document.addDictionary(dict.getHandle(), dict); // Store by handle
+             document.addObject(dict.getHandle(), dict); // Also add to generic objects
+        }
+
+
+        // aktuellenGroupCode is now the 0 code for the next object or ENDSEC
+        return dict;
+    }
+
+    private void consumeGenericObject(String objectType) throws IOException, DxfParserException {
+        // System.out.println("Consuming generic object of type: " + objectType);
+        // Read and discard codes until the next 0-group code, which marks the start of a new object or ENDSEC.
+        // The initial 0/objectType code has already been read by the caller.
+        String handle = null;
+        String ownerHandle = null;
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            if(aktuellenGroupCode.code == 5) handle = aktuellenGroupCode.value;
+            if(aktuellenGroupCode.code == 330) ownerHandle = aktuellenGroupCode.value;
+            // Just consume other codes for now
+        }
+        // If a handle was found, we could potentially store this "unknown" object by its handle
+        // in DxfDocument.genericObjects for later inspection or if it's referenced elsewhere.
+        if (handle != null) {
+            // System.out.println("Generic object " + objectType + " with handle " + handle + " consumed.");
+            // For now, we don't create a specific object for it, but DxfDocument.addObject could store it.
+            // Example: document.addObject(handle, new DxfGenericObjectPlaceholder(objectType, handle, ownerHandle));
+        }
+        // aktuellenGroupCode is now the 0 code for the next object or ENDSEC
+    }
+
+    private DxfScale parseScaleObject() throws IOException, DxfParserException {
+        DxfScale scale = new DxfScale();
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                case 5: // Handle
+                    scale.setHandle(aktuellenGroupCode.value);
+                    break;
+                case 100: // Subclass marker (e.g., AcDbScale)
+                    // Validate if necessary: if (!"AcDbScale".equals(aktuellenGroupCode.value)) { throw ... }
+                    break;
+                case 330: // Owner handle (typically a DxfDictionary like ACAD_SCALELIST)
+                    scale.setOwnerHandle(aktuellenGroupCode.value);
+                    break;
+                case 300: // Name of the scale (e.g., "1:1", "1:100")
+                    scale.setName(aktuellenGroupCode.value);
+                    break;
+                case 140: // Paper units
+                    scale.setPaperUnits(Double.parseDouble(aktuellenGroupCode.value));
+                    break;
+                case 141: // Drawing units
+                    scale.setDrawingUnits(Double.parseDouble(aktuellenGroupCode.value));
+                    break;
+                case 290: // Is unit scale flag
+                    scale.setUnitScale("1".equals(aktuellenGroupCode.value) || "true".equalsIgnoreCase(aktuellenGroupCode.value));
+                    break;
+                case 70: // Flags (obsolete)
+                    scale.setFlags(Integer.parseInt(aktuellenGroupCode.value));
+                    break;
+                default:
+                    // System.out.println("Unhandled group code for SCALE object: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    break;
+            }
+        }
+
+        if (scale.getHandle() == null) {
+            System.err.println("Warning: Parsed a SCALE object without a handle (code 5).");
+            // Consider how to handle this; for now, it might not be added to maps if handle is primary key.
+        } else {
+            document.addScale(scale); // Add to the specific scales map in DxfDocument
+            document.addObject(scale.getHandle(), scale); // Also add to generic objects map
+        }
+
+        // aktuellenGroupCode is now the 0 code for the next object or ENDSEC
+        return scale;
+    }
             }
         } catch (IOException e) {
             throw new DxfParserException("Error reading DXF file", e);
@@ -124,6 +296,10 @@ public class DxfParser {
                             parseLayerTable();
                         } else if ("LTYPE".equals(tableName)) { // NEW CASE
                             parseLinetypeTable();
+                        } else if ("STYLE".equals(tableName)) { // ADDED FOR TEXTSTYLE
+                            parseStyleTable();
+                        } else if ("BLOCK_RECORD".equalsIgnoreCase(tableName)) { // ADDED FOR BLOCK_RECORD
+                            parseBlockRecordTable();
                         } else if ("DIMSTYLE".equals(tableName)) { // NOVA CONDIÇÃO
                             parseDimStyleTable();                 // NOVO MÉTODO
                         } else {
@@ -321,23 +497,26 @@ public class DxfParser {
                     return;
                 } else {
                     String entityType = aktuellenGroupCode.value.toUpperCase(Locale.ROOT);
-                    int entitiesBefore = document.getModelSpaceEntities().size();
-                    if ("LINE".equals(entityType)) parseLineEntity();
-                    else if ("CIRCLE".equals(entityType)) parseCircleEntity();
-                    else if ("ARC".equals(entityType)) parseArcEntity();
-                    else if ("LWPOLYLINE".equals(entityType)) parseLwPolylineEntity();
-                    else if ("TEXT".equals(entityType)) parseTextEntity();
-                    else if ("INSERT".equals(entityType)) parseInsertEntity();
-                    else if ("DIMENSION".equalsIgnoreCase(entityType)) parseDimensionEntity(); // NOVA CONDIÇÃO
-                    else consumeUnknownEntity();
+                    DxfEntity entity = null;
+                    if ("LINE".equals(entityType)) entity = parseLineEntity();
+                    else if ("CIRCLE".equals(entityType)) entity = parseCircleEntity();
+                    else if ("ARC".equals(entityType)) entity = parseArcEntity();
+                    else if ("LWPOLYLINE".equals(entityType)) entity = parseLwPolylineEntity();
+                    else if ("TEXT".equals(entityType)) entity = parseTextEntity();
+                    else if ("INSERT".equals(entityType)) entity = parseInsertEntity();
+                    else if ("DIMENSION".equalsIgnoreCase(entityType)) entity = parseDimensionEntity();
+                    else if ("SPLINE".equalsIgnoreCase(entityType)) entity = parseSplineEntity(); // Added SPLINE
+                    else consumeUnknownEntity(); // consumeUnknownEntity will advance aktuellenGroupCode
 
-                    if (document.getModelSpaceEntities().size() > entitiesBefore) {
-                        DxfEntity lastEntity = document.getModelSpaceEntities().remove(document.getModelSpaceEntities().size() - 1);
-                        currentBlock.addEntity(lastEntity);
+                    if (entity != null) {
+                        currentBlock.addEntity(entity);
                     }
                 }
             } else {
-                throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " within BLOCK definition, expected 0.");
+                // This case should ideally not be reached if entity parsing methods correctly consume all their codes
+                // and position aktuellenGroupCode to the next 0-code.
+                // If it's reached, it means there's unexpected non-0 code after an entity within a block.
+                throw new DxfParserException("Unexpected non-zero group code " + aktuellenGroupCode + " within BLOCK definition '" + blockName +"', expected 0 for next entity or ENDBLK.");
             }
         }
         throw new DxfParserException("Premature EOF within BLOCK definition for block: " + blockName);
@@ -351,31 +530,39 @@ public class DxfParser {
                     aktuellenGroupCode = nextGroupCode();
                     currentSection = null;
                     return;
-                } else if ("LINE".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseLineEntity();
-                } else if ("CIRCLE".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseCircleEntity();
-                } else if ("ARC".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseArcEntity();
-                } else if ("LWPOLYLINE".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseLwPolylineEntity();
-                } else if ("TEXT".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseTextEntity();
-                } else if ("INSERT".equalsIgnoreCase(aktuellenGroupCode.value)) {
-                    parseInsertEntity();
-                } else if ("DIMENSION".equalsIgnoreCase(aktuellenGroupCode.value)) { // NOVA CONDIÇÃO
-                    parseDimensionEntity();                                     // NOVO MÉTODO
-                } else {
-                    consumeUnknownEntity();
                 }
+
+                DxfEntity entity = null;
+                String entityType = aktuellenGroupCode.value.toUpperCase(Locale.ROOT);
+
+                if ("LINE".equalsIgnoreCase(entityType)) entity = parseLineEntity();
+                else if ("CIRCLE".equalsIgnoreCase(entityType)) entity = parseCircleEntity();
+                else if ("ARC".equalsIgnoreCase(entityType)) entity = parseArcEntity();
+                else if ("LWPOLYLINE".equalsIgnoreCase(entityType)) entity = parseLwPolylineEntity();
+                else if ("TEXT".equalsIgnoreCase(entityType)) entity = parseTextEntity();
+                else if ("INSERT".equalsIgnoreCase(entityType)) entity = parseInsertEntity();
+                else if ("DIMENSION".equalsIgnoreCase(entityType)) entity = parseDimensionEntity();
+                else if ("SPLINE".equalsIgnoreCase(entityType)) entity = parseSplineEntity(); // Added SPLINE
+                else {
+                    consumeUnknownEntity(); // Advances aktuellenGroupCode
+                    // No entity to add, loop continues
+                }
+
+                if (entity != null) {
+                    document.addEntity(entity);
+                }
+                // If consumeUnknownEntity was called, aktuellenGroupCode is already advanced.
+                // If a parse<Entity>Entity method was called, it's responsible for advancing aktuellenGroupCode
+                // to the code that follows the entity it parsed (which should be the next 0/entityType or 0/ENDSEC).
             } else {
-                throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " at start of entity in ENTITIES section.");
+                 // This should not be reached if entities are correctly parsed and consume their group codes.
+                throw new DxfParserException("Unexpected non-zero group code " + aktuellenGroupCode + " at start of entity in ENTITIES section.");
             }
         }
          throw new DxfParserException("Premature EOF in ENTITIES section.");
     }
 
-    private void parseLineEntity() throws IOException, DxfParserException {
+    private DxfLine parseLineEntity() throws IOException, DxfParserException {
         DxfLine line = new DxfLine();
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
@@ -387,13 +574,14 @@ public class DxfParser {
                 case 21: line.setEndPoint(new Point3D(line.getEndPoint().x, Double.parseDouble(aktuellenGroupCode.value), line.getEndPoint().z)); break;
                 case 31: line.setEndPoint(new Point3D(line.getEndPoint().x, line.getEndPoint().y, Double.parseDouble(aktuellenGroupCode.value))); break;
                 case 62: line.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                default: break;
+                default: break; // Ignore other codes
             }
         }
-        document.addEntity(line);
+        // aktuellenGroupCode is now the 0 code for the next entity or ENDSEC/ENDBLK
+        return line;
     }
 
-    private void parseCircleEntity() throws IOException, DxfParserException {
+    private DxfCircle parseCircleEntity() throws IOException, DxfParserException {
         DxfCircle circle = new DxfCircle();
          while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
@@ -403,19 +591,21 @@ public class DxfParser {
                 case 30: circle.setCenter(new Point3D(circle.getCenter().x, circle.getCenter().y, Double.parseDouble(aktuellenGroupCode.value))); break;
                 case 40: circle.setRadius(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 62: circle.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                default: break;
+                default: break; // Ignore other codes
             }
         }
-        document.addEntity(circle);
+        return circle;
     }
 
-    private void consumeUnknownEntity() throws IOException, DxfParserException {
+    private DxfEntity consumeUnknownEntity() throws IOException, DxfParserException {
+        // System.out.println("Consuming unknown entity type: " + aktuellenGroupCode.value + " in section " + currentSection);
         while((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
-            // just consume
+            // just consume codes until the next 0-group code
         }
+        return null; // Return null as no known entity was parsed
     }
 
-    private void parseArcEntity() throws IOException, DxfParserException {
+    private DxfArc parseArcEntity() throws IOException, DxfParserException {
         DxfArc arc = new DxfArc();
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
@@ -427,15 +617,15 @@ public class DxfParser {
                 case 50: arc.setStartAngle(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 51: arc.setEndAngle(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 62: arc.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                default: break;
+                default: break; // Ignore other codes
             }
         }
-        document.addEntity(arc);
+        return arc;
     }
 
-    private void parseLwPolylineEntity() throws IOException, DxfParserException {
+    private DxfLwPolyline parseLwPolylineEntity() throws IOException, DxfParserException {
         DxfLwPolyline lwpoly = new DxfLwPolyline();
-        int vertexCount = 0;
+        int vertexCount = 0; // Expected vertex count from code 90
         double currentX = 0, currentY = 0;
         boolean xRead = false;
 
@@ -480,12 +670,13 @@ public class DxfParser {
             }
         }
         if (vertexCount > 0 && lwpoly.getNumberOfVertices() != vertexCount && lwpoly.getNumberOfVertices() > 0) {
-            // Warning or error for vertex count mismatch could be added here.
+            // Potentially log a warning if vertex count from code 90 doesn't match parsed vertices.
+            // System.out.println("LWPOLYLINE: Expected " + vertexCount + " vertices, found " + lwpoly.getNumberOfVertices());
         }
-        document.addEntity(lwpoly);
+        return lwpoly;
     }
 
-    private void parseTextEntity() throws IOException, DxfParserException {
+    private DxfText parseTextEntity() throws IOException, DxfParserException {
         DxfText text = new DxfText();
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
@@ -498,13 +689,13 @@ public class DxfParser {
                 case 40: text.setHeight(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 50: text.setRotationAngle(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 62: text.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                default: break;
+                default: break; // Ignore other codes
             }
         }
-        document.addEntity(text);
+        return text;
     }
 
-    private void parseInsertEntity() throws IOException, DxfParserException {
+    private DxfInsert parseInsertEntity() throws IOException, DxfParserException {
         DxfInsert insert = new DxfInsert();
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
@@ -517,73 +708,83 @@ public class DxfParser {
                 case 42: insert.setYScale(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 50: insert.setRotationAngle(Double.parseDouble(aktuellenGroupCode.value)); break;
                 case 62: insert.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                default: break;
+                default: break; // Ignore other codes
             }
         }
         if (insert.getBlockName() == null || insert.getBlockName().trim().isEmpty()) {
-            throw new DxfParserException("INSERT entity missing block name (group code 2).");
+            throw new DxfParserException("INSERT entity missing block name (group code 2). Current group: " + aktuellenGroupCode);
         }
-        document.addEntity(insert);
+        return insert;
     }
 
-    private void parseDimensionEntity() throws IOException, DxfParserException {
+    private DxfDimension parseDimensionEntity() throws IOException, DxfParserException {
         DxfDimension dimension = new DxfDimension();
-        // Common entity properties like layer, color are typically handled by AbstractDxfEntity or a common parser method if one exists.
-        // For now, we'll set them directly if they are common, or let DxfDimension handle defaults.
+        // Initialize points to avoid null checks when setting individual coordinates
+        Point3D defPoint = new Point3D(0,0,0); // For codes 10,20,30
+        Point3D midTextPoint = new Point3D(0,0,0); // For codes 11,21,31
+        Point3D p1 = new Point3D(0,0,0); // For codes 13,23,33
+        Point3D p2 = new Point3D(0,0,0); // For codes 14,24,34
+        Point3D extrusion = new Point3D(0,0,1); // Default extrusion
 
-        // Loop through group codes for the DIMENSION entity
+        boolean defPointXRead = false, defPointYRead = false, defPointZRead = false;
+        boolean midTextXRead = false, midTextYRead = false, midTextZRead = false;
+        boolean p1XRead = false, p1YRead = false, p1ZRead = false;
+        boolean p2XRead = false, p2YRead = false, p2ZRead = false;
+        boolean extrusionXRead = false, extrusionYRead = false, extrusionZRead = false;
+
+
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
-                // Common AcDbEntity codes
                 case 8: dimension.setLayerName(aktuellenGroupCode.value); break;
                 case 62: dimension.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
-                // TODO: Add other common entity properties if needed (linetype, lineweight, visibility etc.)
-                // For AcDbDimension subclass
-                case 2: dimension.setBlockName(aktuellenGroupCode.value); break;
+                case 2: dimension.setBlockName(aktuellenGroupCode.value); break; // Geometry block name
                 case 3: dimension.setDimensionStyleName(aktuellenGroupCode.value); break;
-                case 10: dimension.setDefinitionPoint(new Point3D(Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint().y, dimension.getDefinitionPoint().z)); break;
-                case 20: dimension.setDefinitionPoint(new Point3D(dimension.getDefinitionPoint().x, Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint().z)); break;
-                case 30: dimension.setDefinitionPoint(new Point3D(dimension.getDefinitionPoint().x, dimension.getDefinitionPoint().y, Double.parseDouble(aktuellenGroupCode.value))); break;
-                case 11: dimension.setMiddleOfTextPoint(new Point3D(Double.parseDouble(aktuellenGroupCode.value), dimension.getMiddleOfTextPoint().y, dimension.getMiddleOfTextPoint().z)); break;
-                case 21: dimension.setMiddleOfTextPoint(new Point3D(dimension.getMiddleOfTextPoint().x, Double.parseDouble(aktuellenGroupCode.value), dimension.getMiddleOfTextPoint().z)); break;
-                case 31: dimension.setMiddleOfTextPoint(new Point3D(dimension.getMiddleOfTextPoint().x, dimension.getMiddleOfTextPoint().y, Double.parseDouble(aktuellenGroupCode.value))); break;
-                case 1: dimension.setDimensionText(aktuellenGroupCode.value); break; // Actual dimension text (if overridden)
+                case 1: dimension.setDimensionText(aktuellenGroupCode.value); break;
                 case 70: dimension.setDimensionTypeFlags(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 50: dimension.setRotationAngle(Double.parseDouble(aktuellenGroupCode.value)); break; // For rotated dimensions
 
-                // Codes for AcDbAlignedDimension (or other linear types)
-                // These are typically after a 100/AcDbAlignedDimension group, but we're simplifying for now
-                case 13: dimension.setDefinitionPoint1(new Point3D(Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint1().y, dimension.getDefinitionPoint1().z)); break;
-                case 23: dimension.setDefinitionPoint1(new Point3D(dimension.getDefinitionPoint1().x, Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint1().z)); break;
-                case 33: dimension.setDefinitionPoint1(new Point3D(dimension.getDefinitionPoint1().x, dimension.getDefinitionPoint1().y, Double.parseDouble(aktuellenGroupCode.value))); break;
-                case 14: dimension.setDefinitionPoint2(new Point3D(Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint2().y, dimension.getDefinitionPoint2().z)); break;
-                case 24: dimension.setDefinitionPoint2(new Point3D(dimension.getDefinitionPoint2().x, Double.parseDouble(aktuellenGroupCode.value), dimension.getDefinitionPoint2().z)); break;
-                case 34: dimension.setDefinitionPoint2(new Point3D(dimension.getDefinitionPoint2().x, dimension.getDefinitionPoint2().y, Double.parseDouble(aktuellenGroupCode.value))); break;
+                // Definition Point (Code 10, 20, 30) - Also used as Dimension Line Definition Point
+                case 10: defPoint.x = Double.parseDouble(aktuellenGroupCode.value); defPointXRead = true; break;
+                case 20: defPoint.y = Double.parseDouble(aktuellenGroupCode.value); defPointYRead = true; break;
+                case 30: defPoint.z = Double.parseDouble(aktuellenGroupCode.value); defPointZRead = true; break;
 
-                // Extrusion direction
-                case 210: dimension.setExtrusionDirection(new Point3D(Double.parseDouble(aktuellenGroupCode.value), dimension.getExtrusionDirection().y, dimension.getExtrusionDirection().z)); break;
-                case 220: dimension.setExtrusionDirection(new Point3D(dimension.getExtrusionDirection().x, Double.parseDouble(aktuellenGroupCode.value), dimension.getExtrusionDirection().z)); break;
-                case 230: dimension.setExtrusionDirection(new Point3D(dimension.getExtrusionDirection().x, dimension.getExtrusionDirection().y, Double.parseDouble(aktuellenGroupCode.value))); break;
+                // Middle of Text Point (Code 11, 21, 31)
+                case 11: midTextPoint.x = Double.parseDouble(aktuellenGroupCode.value); midTextXRead = true; break;
+                case 21: midTextPoint.y = Double.parseDouble(aktuellenGroupCode.value); midTextYRead = true; break;
+                case 31: midTextPoint.z = Double.parseDouble(aktuellenGroupCode.value); midTextZRead = true; break;
 
-                // Codes to skip for now (related to AcDbDimension specific subclasses or less critical data)
-                case 5: // Handle - already handled by AbstractDxfEntity or not stored explicitly at this level
-                case 100: // Subclass marker (e.g., AcDbDimension, AcDbAlignedDimension) - we infer type from 70 or handle specific codes
-                case 71: // Attachment point
-                case 72: // Text line spacing style
-                case 41: // Text line spacing factor
-                case 42: // Actual measurement (read-only)
-                case 50: // Angle of rotated dimension - For AcDbRotatedDimension
-                case 51: // OBSOLETE - Horizontal direction angle
-                case 52: // OBSOLETE - Rotation angle of dimension text away from dimension line
-                case 53: // Rotation angle of dimension text
-                // ... any other codes that are not immediately needed for basic representation
-                    break;
+                // Linear/Aligned Point 1 (Codes 13, 23, 33)
+                case 13: p1.x = Double.parseDouble(aktuellenGroupCode.value); p1XRead = true; break;
+                case 23: p1.y = Double.parseDouble(aktuellenGroupCode.value); p1YRead = true; break;
+                case 33: p1.z = Double.parseDouble(aktuellenGroupCode.value); p1ZRead = true; break;
+
+                // Linear/Aligned Point 2 (Codes 14, 24, 34)
+                case 14: p2.x = Double.parseDouble(aktuellenGroupCode.value); p2XRead = true; break;
+                case 24: p2.y = Double.parseDouble(aktuellenGroupCode.value); p2YRead = true; break;
+                case 34: p2.z = Double.parseDouble(aktuellenGroupCode.value); p2ZRead = true; break;
+
+                // Extrusion Direction (Codes 210, 220, 230)
+                case 210: extrusion.x = Double.parseDouble(aktuellenGroupCode.value); extrusionXRead = true; break;
+                case 220: extrusion.y = Double.parseDouble(aktuellenGroupCode.value); extrusionYRead = true; break;
+                case 230: extrusion.z = Double.parseDouble(aktuellenGroupCode.value); extrusionZRead = true; break;
+
+                // Other codes like 5 (handle), 100 (subclass markers) are ignored for now
+                // More specific codes for different dimension types (angular, diameter, radius, ordinate)
+                // (e.g., 15,25,35 for angular; 16,26,36 for angular 3pt) would be added here.
                 default:
-                    // Optionally log unhandled group codes for DIMENSION if debugging:
-                    // System.out.println("Unhandled group code for DIMENSION: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    // System.out.println("Unhandled DIMENSION group code: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
                     break;
             }
         }
-        document.addEntity(dimension);
+
+        if(defPointXRead || defPointYRead || defPointZRead) dimension.setDefinitionPoint(defPoint);
+        if(midTextXRead || midTextYRead || midTextZRead) dimension.setMiddleOfTextPoint(midTextPoint);
+        if(p1XRead || p1YRead || p1ZRead) dimension.setLinearPoint1(p1);
+        if(p2XRead || p2YRead || p2ZRead) dimension.setLinearPoint2(p2);
+        if(extrusionXRead || extrusionYRead || extrusionZRead) dimension.setExtrusionDirection(extrusion);
+        else dimension.setExtrusionDirection(new Point3D(0,0,1)); // Ensure default if no codes read
+
+        return dimension;
     }
 
     private void parseDimStyleTable() throws IOException, DxfParserException {
@@ -614,152 +815,505 @@ public class DxfParser {
 
     private void parseSingleDimStyleEntry() throws IOException, DxfParserException {
         String dimStyleName = null;
-        DxfDimStyle style = null; // Será instanciado quando o nome for encontrado
-
-        // Valores temporários para os atributos, com padrões que podem ser sobrescritos pelos códigos DXF.
-        // Esses padrões devem idealmente corresponder aos da classe DxfDimStyle para consistência,
-        // mas aqui eles são reinicializados para cada entrada de estilo que está sendo parseada.
-        double arrowSize = 2.5;
-        double extensionLineOffset = 0.625;
-        double extensionLineExtension = 1.25;
-        double textHeight = 2.5;
-        int decimalPlaces = 4;
-        double textGap = 0.09; // Este valor pode ser relativo à altura do texto.
-        int dimensionLineColor = 0; // BYBLOCK
-        int extensionLineColor = 0; // BYBLOCK
-        int textColor = 0;          // BYBLOCK
+        DxfDimStyle style = null;
         boolean nameFound = false;
 
-        // O primeiro código após 0/DIMSTYLE pode ser 105 (handle), 2 (nome), 330 (dict handle) etc.
-        // Precisamos de um loop que leia até o próximo código 0.
+        // Temporary variables to hold values until the style object is confirmed/created
+        String tempHandle = null;
+        int tempFlags70 = 0;
+        int tempDimclrd = 0;
+        int tempDimclre = 0;
+        double tempDimexe = 0.18; // Default from DxfDimStyle
+        double tempDimexo = 0.0625; // Default from DxfDimStyle
+        String tempDimblkName = ""; // Default from DxfDimStyle
+        double tempDimasz = 0.18; // Default from DxfDimStyle
+        String tempDimtxstyName = "STANDARD"; // Default from DxfDimStyle
+        int tempDimclrt = 0;
+        double tempDimtxt = 0.18; // Default from DxfDimStyle
+        double tempDimgap = 0.09; // Default from DxfDimStyle
+        int tempDimdec = 2; // Default from DxfDimStyle
+        int tempDimtad = 0; // Default from DxfDimStyle (text vertical alignment)
+        boolean tempDimtih = true; // Default from DxfDimStyle
+        boolean tempDimtoh = true; // Default from DxfDimStyle
+        boolean tempDimtofl = false; // Default from DxfDimStyle
+        boolean tempDimse1 = false; // Default from DxfDimStyle
+        boolean tempDimse2 = false; // Default from DxfDimStyle
+
+
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
-                case 2: // Nome do estilo de cota
+                case 2: // DIMSTYLE name
+                case 3: // Alternative DIMSTYLE name (less common)
                     dimStyleName = aktuellenGroupCode.value;
                     nameFound = true;
-                    // Instanciar o estilo aqui se o nome é o primeiro campo importante encontrado
+                    style = document.getDimensionStyle(dimStyleName);
                     if (style == null) {
                         style = new DxfDimStyle(dimStyleName);
+                    }
+                    // Apply any pre-read values if name came later (though less likely with this loop structure)
+                    if (tempHandle != null) style.setHandle(tempHandle);
+                    style.setFlags70(tempFlags70);
+                    style.setDimensionLineColor(tempDimclrd);
+                    style.setExtensionLineColor(tempDimclre);
+                    style.setExtensionLineExtension(tempDimexe);
+                    style.setExtensionLineOffset(tempDimexo);
+                    style.setDimBlkName(tempDimblkName);
+                    style.setArrowSize(tempDimasz);
+                    style.setTextStyleName(tempDimtxstyName);
+                    style.setTextColor(tempDimclrt);
+                    style.setTextHeight(tempDimtxt);
+                    style.setTextGap(tempDimgap);
+                    style.setDecimalPlaces(tempDimdec);
+                    style.setTextVerticalAlignment(tempDimtad);
+                    style.setTextInsideHorizontal(tempDimtih);
+                    style.setTextOutsideHorizontal(tempDimtoh);
+                    style.setTextOutsideExtensions(tempDimtofl);
+                    style.setSuppressFirstExtensionLine(tempDimse1);
+                    style.setSuppressSecondExtensionLine(tempDimse2);
+                    break;
+                case 105: // Handle
+                    tempHandle = aktuellenGroupCode.value;
+                    if (style != null) style.setHandle(tempHandle);
+                    break;
+                case 70: // Standard flags
+                    tempFlags70 = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setFlags70(tempFlags70);
+                    // DIMSE1, DIMSE2 can be bits in 70 for newer DXF versions
+                    // Example: if ( (tempFlags70 & 1) != 0 ) style.setSuppressFirstExtensionLine(true);
+                    // Example: if ( (tempFlags70 & 2) != 0 ) style.setSuppressSecondExtensionLine(true);
+                    break;
+                case 41: // DIMASZ - Arrow size
+                    tempDimasz = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setArrowSize(tempDimasz);
+                    break;
+                case 42: // DIMEXO - Extension line offset
+                    tempDimexo = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineOffset(tempDimexo);
+                    break;
+                case 43: // DIMEXE (R12) - Extension line extension. AutoCAD seems to use 44 more often in modern DXF.
+                case 44: // DIMEXE (Modern) - Extension line extension
+                    tempDimexe = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineExtension(tempDimexe);
+                    break;
+                // DIMTXT can be 40 (older R12), 44 (intermediate), or 140 (modern preferred)
+                // We will prioritize 140 if seen, then 44, then 40.
+                case 40: // DIMTXT - Text height (fallback 2)
+                    if (style != null) { // Only if 140 or 44 not yet processed
+                        if (style.getTextHeight() == new DxfDimStyle("").getTextHeight()) { // Check if it's still default
+                             style.setTextHeight(Double.parseDouble(aktuellenGroupCode.value));
+                        }
                     } else {
-                        style.setName(dimStyleName);
+                        tempDimtxt = Double.parseDouble(aktuellenGroupCode.value);
                     }
                     break;
-                case 3: // Nome do estilo de cota (alternativo, menos comum que o 2 para DIMSTYLE)
-                    if (!nameFound) { // Só usar se o código 2 ainda não foi encontrado
-                        dimStyleName = aktuellenGroupCode.value;
-                        nameFound = true;
-                        if (style == null) {
-                            style = new DxfDimStyle(dimStyleName);
-                        } else {
-                            style.setName(dimStyleName);
-                        }
-                    }
-                    break;
-                case 41: // DIMASZ - Tamanho da seta
-                    arrowSize = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) style.setArrowSize(arrowSize);
-                    break;
-                case 42: // DIMEXO - Offset da linha de extensão
-                    extensionLineOffset = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) style.setExtensionLineOffset(extensionLineOffset);
-                    break;
-                case 43: // DIMEXE - Extensão da linha de extensão
-                    extensionLineExtension = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) style.setExtensionLineExtension(extensionLineExtension);
-                    break;
-                case 44: // DIMTXT - Altura do texto (fallback)
-                    // Usar 140 se disponível, este é um fallback
-                    if (style != null && style.getTextHeight() == 2.5) { // Apenas se não definido por 140
-                         textHeight = Double.parseDouble(aktuellenGroupCode.value);
-                         style.setTextHeight(textHeight);
-                    } else if (style == null) { // Se o estilo não foi instanciado ainda
-                        textHeight = Double.parseDouble(aktuellenGroupCode.value);
-                    }
-                    break;
-                case 140: // DIMTXT - Altura do texto (preferencial)
-                    textHeight = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) style.setTextHeight(textHeight);
-                    break;
-                case 147: // DIMGAP - Gap entre texto e linha de cota (preferencial)
-                    textGap = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) style.setTextGap(textGap);
-                    break;
-                case 278: // DIMGAP (usado no Demo plan.dxf, mas valor 46 é estranho)
-                          // A documentação sugere que 278 é DIMGAP, mas espera um double.
-                          // O Demo plan.dxf tem 46, que é um índice de cor.
-                          // Por segurança, vamos tentar parsear como double. Se falhar, ignorar.
-                    try {
-                        double demoGap = Double.parseDouble(aktuellenGroupCode.value);
-                        // Se o valor for 46.0, pode ser um erro no arquivo DXF.
-                        // Priorizar 147 se já lido, ou usar este se 147 não estiver presente.
-                        if (style != null && style.getTextGap() == 0.09) { // Apenas se não definido por 147
-                             textGap = demoGap; // Atualiza a variável local
-                             style.setTextGap(textGap);
-                        } else if (style == null) {
-                            textGap = demoGap;
-                        }
-                    } catch (NumberFormatException e) {
-                        // System.err.println("Aviso: DIMGAP (278) com valor não numérico: " + aktuellenGroupCode.value);
-                    }
-                    break;
-                // case 48: // DIMGAP (fallback menos comum)
-                //     if (style != null && style.getTextGap() == 0.09) { // Apenas se não definido por 147 ou 278
-                //          textGap = Double.parseDouble(aktuellenGroupCode.value);
-                //          style.setTextGap(textGap);
-                //     } else if (style == null) {
-                //         textGap = Double.parseDouble(aktuellenGroupCode.value);
+                // case 44: // DIMTXT - Text height (fallback 1) - Covered by current DxfDimStyle default logic, but we can be more explicit
+                //     double val44 = Double.parseDouble(aktuellenGroupCode.value);
+                //     if (style != null) {
+                //         // If 140 hasn't set it, or if current value is default, use 44
+                //         if (style.getTextHeight() == new DxfDimStyle("").getTextHeight() || /* logic to check if 140 was source */) {
+                //             style.setTextHeight(val44);
+                //         }
+                //     } else {
+                //         tempDimtxt = val44;
                 //     }
-                //     break;
-                case 176: // DIMCLRD - Cor da linha de cota
-                    dimensionLineColor = Integer.parseInt(aktuellenGroupCode.value);
-                    if (style != null) style.setDimensionLineColor(dimensionLineColor);
+                //    break;
+                case 140: // DIMTXT - Text height (preferred)
+                    tempDimtxt = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setTextHeight(tempDimtxt);
                     break;
-                case 177: // DIMCLRE - Cor da linha de extensão
-                    extensionLineColor = Integer.parseInt(aktuellenGroupCode.value);
-                    if (style != null) style.setExtensionLineColor(extensionLineColor);
+                case 147: // DIMGAP - Text gap (preferred)
+                    tempDimgap = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setTextGap(tempDimgap);
                     break;
-                case 178: // DIMCLRT - Cor do texto
-                    textColor = Integer.parseInt(aktuellenGroupCode.value);
-                    if (style != null) style.setTextColor(textColor);
+                case 48: // DIMGAP (fallback 1)
+                case 278: // DIMGAP (fallback 2) - Sometimes value is color index, handle with care
+                    try {
+                        double gapFallback = Double.parseDouble(aktuellenGroupCode.value);
+                        if (style != null) {
+                            if (style.getTextGap() == new DxfDimStyle("").getTextGap()) { // Only if 147 not processed
+                                style.setTextGap(gapFallback);
+                            }
+                        } else {
+                             // tempDimgap should be updated only if 147 was not seen.
+                             // This requires more state or setting it and letting 147 overwrite. For now, simple overwrite:
+                            tempDimgap = gapFallback;
+                        }
+                    } catch (NumberFormatException e) { /* ignore if not a double, e.g. for 278 as color */ }
                     break;
-                case 271: // DIMDEC - Casas decimais
-                    decimalPlaces = Integer.parseInt(aktuellenGroupCode.value);
-                    if (style != null) style.setDecimalPlaces(decimalPlaces);
+                case 176: // DIMCLRD - Dimension line color
+                    tempDimclrd = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setDimensionLineColor(tempDimclrd);
                     break;
-
-                // Ignorar outros códigos por enquanto
-                // case 70: // Flags (já lido em parseDimStyleTable ou não crítico para atributos visuais aqui)
-                // case 100: // Subclass marker AcDbDimStyleTableRecord
-                // case 105: // Handle
-                // case 330: // Soft-pointer ID/handle to owner dictionary
-                // ... etc ...
+                case 177: // DIMCLRE - Extension line color
+                    tempDimclre = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineColor(tempDimclre);
+                    break;
+                case 178: // DIMCLRT - Text color
+                    tempDimclrt = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setTextColor(tempDimclrt);
+                    break;
+                case 271: // DIMDEC - Decimal places (for linear dimensions)
+                    tempDimdec = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setDecimalPlaces(tempDimdec);
+                    break;
+                case 1:   // DIMBLK - Arrow block name (obsolete but might appear)
+                case 342: // DIMBLK - Arrow block name (preferred)
+                    tempDimblkName = aktuellenGroupCode.value;
+                    if (style != null) style.setDimBlkName(tempDimblkName);
+                    break;
+                case 340: // DIMTXSTY - Text style name (handle to STYLE object)
+                    tempDimtxstyName = aktuellenGroupCode.value;
+                    if (style != null) style.setTextStyleName(tempDimtxstyName);
+                    break;
+                case 77: // DIMTAD - Text vertical alignment (0=center, 1=above, 2=os, 3=jis, 4=below)
+                    tempDimtad = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setTextVerticalAlignment(tempDimtad);
+                    break;
+                case 73: // DIMTIH - Text inside horizontal (1=true, 0=false)
+                    tempDimtih = !"0".equals(aktuellenGroupCode.value);
+                    if (style != null) style.setTextInsideHorizontal(tempDimtih);
+                    break;
+                case 74: // DIMTOH - Text outside horizontal (1=true, 0=false)
+                    tempDimtoh = !"0".equals(aktuellenGroupCode.value);
+                    if (style != null) style.setTextOutsideHorizontal(tempDimtoh);
+                    break;
+                case 172: // DIMTOFL - Text outside extensions if it doesn't fit (1=true, 0=false)
+                    tempDimtofl = !"0".equals(aktuellenGroupCode.value);
+                    if (style != null) style.setTextOutsideExtensions(tempDimtofl);
+                    break;
+                case 75: // DIMSE1 - Suppress first extension line (R12) (1=true, 0=false)
+                    tempDimse1 = !"0".equals(aktuellenGroupCode.value);
+                    if (style != null) style.setSuppressFirstExtensionLine(tempDimse1);
+                    break;
+                case 76: // DIMSE2 - Suppress second extension line (R12) (1=true, 0=false)
+                    tempDimse2 = !"0".equals(aktuellenGroupCode.value);
+                    if (style != null) style.setSuppressSecondExtensionLine(tempDimse2);
+                    break;
+                // Add more cases for other DIMSTYLE variables as needed:
+                // DIMLWD (7), DIMLWE (370), DIMSCALE (40, but usually a header var), DIMLFAC (143)
+                // DIMTVP (145), DIMTIX (179), DIMSOXD (171), etc.
                 default:
+                    // System.out.println("Unhandled/Ignored DIMSTYLE group code: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
                     break;
             }
         }
 
-        if (style != null) { // Se o estilo foi instanciado (ou seja, o nome foi encontrado)
-            // Atribuir valores lidos caso o nome do estilo tenha vindo depois dos valores
-            style.setArrowSize(arrowSize);
-            style.setExtensionLineOffset(extensionLineOffset);
-            style.setExtensionLineExtension(extensionLineExtension);
-            style.setTextHeight(textHeight); // Garante que o último lido (140 ou 44) seja usado
-            style.setDecimalPlaces(decimalPlaces);
-            style.setTextGap(textGap); // Garante que o último lido (147 ou 278) seja usado
-            style.setDimensionLineColor(dimensionLineColor);
-            style.setExtensionLineColor(extensionLineColor);
-            style.setTextColor(textColor);
+        if (style != null) {
+            document.addDimensionStyle(style); // addDimensionStyle handles overwriting if name exists
+        } else if (nameFound) {
+            // This means a name was found, but the style object somehow wasn't created or retrieved.
+            // This should ideally be caught by the logic within the loop when name is parsed.
+            throw new DxfParserException("DIMSTYLE with name '" + dimStyleName + "' found, but DxfDimStyle object was not properly initialized/retrieved.");
+        }
+        // If nameFound is false, it implies a DIMSTYLE entry without a name (code 2 or 3).
+        // This is generally invalid for named table entries.
+        if (!nameFound && aktuellenGroupCode != null && !"ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+             throw new DxfParserException("DIMSTYLE entry is missing a name (group code 2 or 3). Current code: " + aktuellenGroupCode);
+        }
+        if (aktuellenGroupCode == null && nameFound == false && !"DIMSTYLE".equalsIgnoreCase(currentSection)) {
+             // Premature EOF
+        }
+        // aktuellenGroupCode is already positioned at the next 0 code or is null by the loop condition.
+    }
 
-            document.addDimensionStyle(style);
-        } else if (nameFound) { // Nome foi encontrado, mas estilo não foi instanciado (não deveria acontecer com a lógica atual)
-             throw new DxfParserException("DIMSTYLE com nome '" + dimStyleName + "' encontrado, mas objeto de estilo não foi criado.");
+    private void parseStyleTable() throws IOException, DxfParserException {
+        // Consume table header codes until the first "0" "STYLE" or "0" "ENDTAB"
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            // Ignoring table-specific header codes like 70 (max number of entries)
         }
-        // Se nameFound é false, significa que um DIMSTYLE foi encontrado sem um código 2 (nome).
-        // Isso é permitido pelo DXF (estilos anônimos), mas não vamos suportá-los por enquanto.
-        // Ou pode ser um EOF prematuro.
-        if (aktuellenGroupCode == null && nameFound == false) {
-            throw new DxfParserException("Premature EOF within a DIMSTYLE entry before a name was found.");
+
+        while (aktuellenGroupCode != null) {
+            if (aktuellenGroupCode.code == 0) {
+                if ("ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    return; // End of STYLE table
+                } else if ("STYLE".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    parseSingleTextStyleEntry();
+                    // parseSingleTextStyleEntry advances aktuellenGroupCode to the next 0 code
+                } else {
+                    throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " in STYLE table while expecting STYLE or ENDTAB.");
+                }
+            } else {
+                throw new DxfParserException("Unexpected non-zero group code " + aktuellenGroupCode + " where 0/STYLE or 0/ENDTAB was expected in STYLE table.");
+            }
         }
-        // aktuellenGroupCode já está posicionado no próximo código 0 ou é null.
+        throw new DxfParserException("Premature EOF in STYLE table.");
+    }
+
+    private void parseSingleTextStyleEntry() throws IOException, DxfParserException {
+        String styleName = null;
+        DxfTextStyle textStyle = null;
+
+        // Default values according to DXF specification or common practice
+        double fixedTextHeight = 0.0; // Code 40
+        double widthFactor = 1.0;     // Code 41
+        double obliqueAngle = 0.0;    // Code 50
+        int textGenerationFlags = 0;  // Code 71
+        double lastHeightUsed = 0.0;  // Code 42 (often not critical for parsing definition)
+        String primaryFontFileName = ""; // Code 3
+        String bigFontFileName = null;   // Code 4 (optional)
+        int flags70 = 0;                 // Code 70 (standard flags)
+
+        boolean nameFound = false;
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                case 2: // Style name
+                    styleName = aktuellenGroupCode.value;
+                    nameFound = true;
+                    textStyle = new DxfTextStyle(styleName);
+                    break;
+                case 3: // Primary font file name
+                    primaryFontFileName = aktuellenGroupCode.value;
+                    if (textStyle != null) textStyle.setPrimaryFontFileName(primaryFontFileName);
+                    break;
+                case 4: // Big font file name (optional)
+                    bigFontFileName = aktuellenGroupCode.value;
+                    if (textStyle != null) textStyle.setBigFontFileName(bigFontFileName);
+                    break;
+                case 40: // Fixed text height
+                    fixedTextHeight = Double.parseDouble(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setFixedTextHeight(fixedTextHeight);
+                    break;
+                case 41: // Width factor
+                    widthFactor = Double.parseDouble(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setWidthFactor(widthFactor);
+                    break;
+                case 42: // Last height used
+                    lastHeightUsed = Double.parseDouble(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setLastHeightUsed(lastHeightUsed);
+                    break;
+                case 50: // Oblique angle
+                    obliqueAngle = Double.parseDouble(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setObliqueAngle(obliqueAngle);
+                    break;
+                case 70: // Standard flags
+                    flags70 = Integer.parseInt(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setFlags(flags70);
+                    break;
+                case 71: // Text generation flags
+                    textGenerationFlags = Integer.parseInt(aktuellenGroupCode.value);
+                    if (textStyle != null) textStyle.setTextGenerationFlags(textGenerationFlags);
+                    break;
+                // Codes to ignore for now:
+                // case 100: // Subclass marker AcDbTextStyleTableRecord
+                // case 1071: // Extended font data (less common)
+                // case 5: // Handle (usually not needed for basic style definition)
+                // case 330: // Soft-pointer ID to owner dictionary
+                default:
+                    // Optionally log unhandled group codes for STYLE if debugging
+                    // System.out.println("Unhandled group code for STYLE: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    break;
+            }
+        }
+
+        if (textStyle != null) { // If the style was instantiated (name was found)
+            // Ensure all parsed values are set, especially if they were read before the name
+            textStyle.setPrimaryFontFileName(primaryFontFileName);
+            if (bigFontFileName != null) textStyle.setBigFontFileName(bigFontFileName);
+            textStyle.setFixedTextHeight(fixedTextHeight);
+            textStyle.setWidthFactor(widthFactor);
+            textStyle.setLastHeightUsed(lastHeightUsed);
+            textStyle.setObliqueAngle(obliqueAngle);
+            textStyle.setFlags(flags70);
+            textStyle.setTextGenerationFlags(textGenerationFlags);
+
+            document.addTextStyle(textStyle);
+        } else if (nameFound) {
+            // This state should ideally not be reached if nameFound implies textStyle is not null.
+            // However, as a safeguard:
+            throw new DxfParserException("STYLE with name '" + styleName + "' found, but DxfTextStyle object was not properly initialized.");
+        }
+        // If nameFound is false, it means a STYLE entry was encountered without a name (code 2).
+        // This is invalid according to DXF standards for named styles.
+        // aktuellenGroupCode is now positioned at the next 0 code (e.g., 0/STYLE or 0/ENDTAB) or is null.
+        if (!nameFound && aktuellenGroupCode != null && !"ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+             // Only throw if it's not the end of the table and we genuinely expected a name for a style entry.
+             // If aktuellenGroupCode is null here, it means premature EOF.
+             // If aktuellenGroupCode is 0/ENDTAB, it's just the end of the table.
+             // This check is a bit lenient; ideally, every 0/STYLE should be followed by a name.
+        }
+         if (aktuellenGroupCode == null && nameFound == false && !"STYLE".equalsIgnoreCase(currentSection)) {
+            // If we are in the middle of parsing and hit EOF without a name, it's an error.
+            // The check for currentSection ensures we are not at a global EOF.
+            // This condition might be too complex or might need refinement based on strictness.
+            // For now, the primary check is that if a textStyle object exists, it's added.
+        }
+    }
+
+    private void parseBlockRecordTable() throws IOException, DxfParserException {
+        // Consume table header codes until the first "0" "BLOCK_RECORD" or "0" "ENDTAB"
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            // Ignoring table-specific header codes like 70 (max number of entries), 100 (AcDbSymbolTable)
+        }
+
+        while (aktuellenGroupCode != null) {
+            if (aktuellenGroupCode.code == 0) {
+                if ("ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    return; // End of BLOCK_RECORD table
+                } else if ("BLOCK_RECORD".equalsIgnoreCase(aktuellenGroupCode.value)) {
+                    parseSingleBlockRecordEntry();
+                    // parseSingleBlockRecordEntry advances aktuellenGroupCode to the next 0 code
+                } else {
+                    throw new DxfParserException("Unexpected group code " + aktuellenGroupCode + " in BLOCK_RECORD table while expecting BLOCK_RECORD or ENDTAB.");
+                }
+            } else {
+                throw new DxfParserException("Unexpected non-zero group code " + aktuellenGroupCode + " where 0/BLOCK_RECORD or 0/ENDTAB was expected in BLOCK_RECORD table.");
+            }
+        }
+        throw new DxfParserException("Premature EOF in BLOCK_RECORD table.");
+    }
+
+    private void parseSingleBlockRecordEntry() throws IOException, DxfParserException {
+        String blockRecordName = null;
+        DxfBlockRecord blockRecord = null;
+        String handle = null;
+        String ownerHandle = null;
+        String layoutHandle = null;
+        String xrefPath = null;
+        boolean nameFound = false;
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                case 2: // Block record name
+                    blockRecordName = aktuellenGroupCode.value;
+                    nameFound = true;
+                    // Check if a record with this name already exists (e.g. default *Model_Space)
+                    blockRecord = document.getBlockRecord(blockRecordName);
+                    if (blockRecord == null) {
+                        blockRecord = new DxfBlockRecord(blockRecordName);
+                    } else {
+                        // If it exists, we will just populate its other fields if available
+                    }
+                    break;
+                case 5: // Handle
+                    handle = aktuellenGroupCode.value;
+                    if (blockRecord != null) blockRecord.setHandle(handle);
+                    break;
+                case 330: // Soft pointer to owner dictionary (often parent dictionary of table)
+                    ownerHandle = aktuellenGroupCode.value;
+                    if (blockRecord != null) blockRecord.setOwnerDictionaryHandle(ownerHandle);
+                    break;
+                case 340: // Hard pointer to layout object
+                    layoutHandle = aktuellenGroupCode.value;
+                    if (blockRecord != null) blockRecord.setLayoutHandle(layoutHandle);
+                    break;
+                case 1: // Xref path name (only for XREF block records)
+                    xrefPath = aktuellenGroupCode.value;
+                    if (blockRecord != null) blockRecord.setXrefPathName(xrefPath);
+                    break;
+                // Codes to ignore for now:
+                // case 100: // Subclass marker (AcDbSymbolTableRecord, AcDbBlockTableRecord)
+                // case 70: // Block explodability and scalability flags (not directly used for structure)
+                // case 280: // Block insertion units (not used for basic definition)
+                // case 281: // Block explodability (0 = not explodable, 1 = explodable)
+                // case 310: // Binary data for preview icon (optional)
+                // case 1001, 1000, 1002, etc. (XDATA)
+                default:
+                    // Optionally log unhandled group codes for BLOCK_RECORD
+                    // System.out.println("Unhandled group code for BLOCK_RECORD: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    break;
+            }
+        }
+
+        if (blockRecord != null) {
+            // Ensure all fields are set if they were read before the name was (though unlikely with current structure)
+            if (handle != null) blockRecord.setHandle(handle);
+            if (ownerHandle != null) blockRecord.setOwnerDictionaryHandle(ownerHandle);
+            if (layoutHandle != null) blockRecord.setLayoutHandle(layoutHandle);
+            if (xrefPath != null) blockRecord.setXrefPathName(xrefPath);
+
+            document.addBlockRecord(blockRecord);
+        } else if (nameFound) {
+            // This implies a name was found but the object wasn't created, which shouldn't happen.
+            throw new DxfParserException("BLOCK_RECORD with name '" + blockRecordName + "' found, but DxfBlockRecord object was not properly initialized.");
+        }
+        // If nameFound is false, it means a BLOCK_RECORD entry was encountered without a name (code 2).
+        // This is invalid.
+        if (!nameFound && aktuellenGroupCode != null && !"ENDTAB".equalsIgnoreCase(aktuellenGroupCode.value)) {
+            // This condition is to catch entries that are not ENDTAB but also lack a name.
+            // A more robust check might be needed if some BLOCK_RECORD entries can be anonymous (unlikely for named table records).
+             throw new DxfParserException("BLOCK_RECORD entry is missing a name (group code 2). Current code: " + aktuellenGroupCode);
+        }
+         if (aktuellenGroupCode == null && nameFound == false && !"BLOCK_RECORD".equalsIgnoreCase(currentSection)) {
+             // Premature EOF in the middle of a block record definition
+             // The currentSection check might be redundant if we are inside parseSingleBlockRecordEntry
+         }
+        // aktuellenGroupCode is now positioned at the next 0 code or is null.
+    }
+
+    private DxfEntity parseSplineEntity() throws IOException, DxfParserException {
+        DxfSpline spline = new DxfSpline();
+        Point3D currentControlPoint = new Point3D(0,0,0);
+        Point3D currentFitPoint = new Point3D(0,0,0);
+        boolean normalXread = false, normalYread = false;
+
+        while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
+            switch (aktuellenGroupCode.code) {
+                // Common entity codes
+                case 8: spline.setLayerName(aktuellenGroupCode.value); break;
+                case 62: spline.setColor(Integer.parseInt(aktuellenGroupCode.value)); break;
+                // Spline specific codes
+                case 210:
+                    spline.getNormalVector().x = Double.parseDouble(aktuellenGroupCode.value);
+                    normalXread = true;
+                    break;
+                case 220:
+                    spline.getNormalVector().y = Double.parseDouble(aktuellenGroupCode.value);
+                    normalYread = true;
+                    break;
+                case 230:
+                    spline.getNormalVector().z = Double.parseDouble(aktuellenGroupCode.value);
+                    // If only Z is provided, X and Y are assumed 0, which is default.
+                    // If X or Y were read, Z completes it.
+                    break;
+                case 70: spline.setFlags(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 71: spline.setDegree(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 72: spline.setNumberOfKnots(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 73: spline.setNumberOfControlPoints(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 74: spline.setNumberOfFitPoints(Integer.parseInt(aktuellenGroupCode.value)); break;
+                case 40: // Knot value
+                    spline.addKnot(Double.parseDouble(aktuellenGroupCode.value));
+                    break;
+                case 42: spline.setKnotTolerance(Double.parseDouble(aktuellenGroupCode.value)); break;
+                case 43: spline.setControlPointTolerance(Double.parseDouble(aktuellenGroupCode.value)); break;
+                case 44: spline.setFitTolerance(Double.parseDouble(aktuellenGroupCode.value)); break;
+                case 10: // Control point X
+                    currentControlPoint = new Point3D(Double.parseDouble(aktuellenGroupCode.value), 0, 0);
+                    break;
+                case 20: // Control point Y
+                    currentControlPoint.y = Double.parseDouble(aktuellenGroupCode.value);
+                    break;
+                case 30: // Control point Z
+                    currentControlPoint.z = Double.parseDouble(aktuellenGroupCode.value);
+                    spline.addControlPoint(new Point3D(currentControlPoint.x, currentControlPoint.y, currentControlPoint.z));
+                    break;
+                case 11: // Fit point X
+                    currentFitPoint = new Point3D(Double.parseDouble(aktuellenGroupCode.value),0,0);
+                    break;
+                case 21: // Fit point Y
+                    currentFitPoint.y = Double.parseDouble(aktuellenGroupCode.value);
+                    break;
+                case 31: // Fit point Z
+                    currentFitPoint.z = Double.parseDouble(aktuellenGroupCode.value);
+                    spline.addFitPoint(new Point3D(currentFitPoint.x, currentFitPoint.y, currentFitPoint.z));
+                    break;
+                default:
+                    // Optionally log unhandled SPLINE group codes
+                    // System.out.println("Unhandled SPLINE group code: " + aktuellenGroupCode.code + " = " + aktuellenGroupCode.value);
+                    break;
+            }
+        }
+        // Basic validation after parsing all codes for the spline
+        if (spline.getNumberOfKnots() > 0 && spline.getKnots().size() != spline.getNumberOfKnots()) {
+            // System.out.println("Warning: SPLINE knot count mismatch. Expected " + spline.getNumberOfKnots() + ", found " + spline.getKnots().size());
+        }
+        if (spline.getNumberOfControlPoints() > 0 && spline.getControlPoints().size() != spline.getNumberOfControlPoints()) {
+            // System.out.println("Warning: SPLINE control point count mismatch. Expected " + spline.getNumberOfControlPoints() + ", found " + spline.getControlPoints().size());
+        }
+        if (spline.getNumberOfFitPoints() > 0 && spline.getFitPoints().size() != spline.getNumberOfFitPoints()) {
+            // System.out.println("Warning: SPLINE fit point count mismatch. Expected " + spline.getNumberOfFitPoints() + ", found " + spline.getFitPoints().size());
+        }
+
+        return spline;
     }
 }
