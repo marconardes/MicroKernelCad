@@ -1,7 +1,7 @@
 /app/core/src/main/java/com/cad/modules/geometry/entities/Circle2D.java
 /app/core/src/main/java/com/cad/core/api/EventBus.java
-/app/core/src/main/java/com/cad/core/services/LoggerService.java
 /app/core/src/main/java/com/cad/core/kernel/ModuleManager.java
+/app/core/src/main/java/com/cad/core/services/LoggerService.java
 /app/core/src/main/java/com/cad/core/services/Utils.java
 /app/core/src/main/java/com/cad/core/App.java
 /app/core/src/main/java/com/cad/core/services/ConfigService.java

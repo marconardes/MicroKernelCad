@@ -47,13 +47,23 @@
     </dependency>
     <dependency>
         <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-anim</artifactId>
+        <version>1.17</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
+        <artifactId>batik-svg-dom</artifactId>
+        <version>1.17</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.xmlgraphics</groupId>
         <artifactId>batik-dom</artifactId>
         <version>1.17</version>
     </dependency>
     <dependency>
         <groupId>org.apache.xmlgraphics</groupId>
         <artifactId>xmlgraphics-commons</artifactId>
-        <version>1.17</version> <!-- Note: Batik 1.17 typically uses xmlgraphics-commons 2.7 or 2.8. Following instruction. -->
+        <version>2.7</version>
     </dependency>
   </dependencies>
   <build>

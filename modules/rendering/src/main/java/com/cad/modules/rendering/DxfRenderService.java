@@ -7,7 +7,7 @@ import com.cad.dxflib.converter.DxfToSvgConverter;
 import com.cad.dxflib.converter.SvgConversionOptions;
 
 import org.w3c.dom.svg.SVGDocument;
-import org.apache.batik.parser.SAXSVGDocumentFactory;
+import org.apache.batik.anim.dom.SAXSVGDocumentFactory; // Changed to anim.dom
 import org.apache.batik.util.XMLResourceDescriptor;
 import java.io.StringReader;
 import java.io.InputStream;
