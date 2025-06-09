@@ -45,6 +45,7 @@ public class CustomCadPanel extends JPanel {
     private double translateY;
     private Point2D panLastMousePosition;
     private static final double HIT_TOLERANCE = 5.0;
+    private String currentDiagramName;
 
     public CustomCadPanel(ToolManager toolManager, DxfRenderService dxfRenderService) {
         this.toolManager = toolManager;
@@ -81,6 +82,7 @@ public class CustomCadPanel extends JPanel {
         clearPreviewLineState();
         clearPreviewCircleState();
         this.svgUniverseFromDxf = null; // Clear previous DXF content
+        this.currentDiagramName = null; // Reset diagram name
 
         if (file == null || !file.exists()) {
             // Optionally, load an empty universe or a universe with an error message
@@ -93,13 +95,14 @@ public class CustomCadPanel extends JPanel {
 
         try (FileInputStream fis = new FileInputStream(file)) {
             // Use a unique name for the diagram, e.g., based on the file name
-            String diagramName = file.getName();
-            this.svgUniverseFromDxf = dxfRenderService.convertDxfToSvgUniverse(fis, diagramName);
+            this.currentDiagramName = file.getName(); // Store diagram name
+            this.svgUniverseFromDxf = dxfRenderService.convertDxfToSvgUniverse(fis, this.currentDiagramName);
         } catch (IOException | DxfParserException e) {
             e.printStackTrace();
             // Optionally, display an error message in the panel
             // For now, just reset the universe
             this.svgUniverseFromDxf = new SVGUniverse();
+            this.currentDiagramName = null; // Reset diagram name on error
             // Example: create a text element showing error
             // com.kitfox.svg.elements.Text errorText = new com.kitfox.svg.elements.Text();
             // errorText.appendText("Error loading DXF: " + e.getMessage());
@@ -247,11 +250,16 @@ public class CustomCadPanel extends JPanel {
 
             // Render DXF content from SVGUniverse
             if (svgUniverseFromDxf != null) {
-                // Try to get the diagram by the name used when loading, or get the first one
                 URI diagramUri = null;
-                Iterator<URI> uriIter = svgUniverseFromDxf.getURIs();
-                if (uriIter.hasNext()) {
-                    diagramUri = uriIter.next();
+                if (this.currentDiagramName != null) {
+                    // Ensure the universe has loaded this diagram by its name (which acts as a stream URI part)
+                    // Note: SVGUniverse.getStreamBuiltURI might not be the correct method
+                    // if the diagramName wasn't used in a way that SVGUniverse recognizes for this.
+                    // The DxfRenderService.convertDxfToSvgUniverse uses diagramName when calling universe.loadSVG(is, name).
+                    // This name is then usable with universe.getDiagram(universe.getStreamBuiltURI(name))
+                    // or directly if the string name itself is treated as the URI internally by some methods.
+                    // Let's assume getStreamBuiltURI is the intended way to retrieve it.
+                    diagramUri = svgUniverseFromDxf.getStreamBuiltURI(this.currentDiagramName);
                 }
 
                 if (diagramUri != null) {
