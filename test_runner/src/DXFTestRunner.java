@@ -11,8 +11,8 @@ public class DXFTestRunner {
         DxfParser parser = new DxfParser();
         InputStream dxfInputStream = null;
         try {
-            dxfInputStream = new FileInputStream("Demo plan.dxf");
-            System.out.println("Attempting to parse 'Demo plan.dxf'...");
+            dxfInputStream = new FileInputStream("1.dxf");
+            System.out.println("Attempting to parse '1.dxf'...");
             DxfDocument doc = parser.parse(dxfInputStream);
             System.out.println("Parsing successful!");
             System.out.println("Number of layers: " + doc.getLayers().size());
