@@ -614,42 +614,152 @@ public class DxfParser {
 
     private void parseSingleDimStyleEntry() throws IOException, DxfParserException {
         String dimStyleName = null;
-        // Outros atributos do DIMSTYLE podem ser lidos aqui no futuro
-        // Ex: int dimTxt = 0; // Code 140: text height
+        DxfDimStyle style = null; // Será instanciado quando o nome for encontrado
 
-        // O primeiro código após 0/DIMSTYLE geralmente é 105 (handle da dimensão), mas pode ser 2 (nome) ou outros.
+        // Valores temporários para os atributos, com padrões que podem ser sobrescritos pelos códigos DXF.
+        // Esses padrões devem idealmente corresponder aos da classe DxfDimStyle para consistência,
+        // mas aqui eles são reinicializados para cada entrada de estilo que está sendo parseada.
+        double arrowSize = 2.5;
+        double extensionLineOffset = 0.625;
+        double extensionLineExtension = 1.25;
+        double textHeight = 2.5;
+        int decimalPlaces = 4;
+        double textGap = 0.09; // Este valor pode ser relativo à altura do texto.
+        int dimensionLineColor = 0; // BYBLOCK
+        int extensionLineColor = 0; // BYBLOCK
+        int textColor = 0;          // BYBLOCK
+        boolean nameFound = false;
+
+        // O primeiro código após 0/DIMSTYLE pode ser 105 (handle), 2 (nome), 330 (dict handle) etc.
         // Precisamos de um loop que leia até o próximo código 0.
         while ((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
             switch (aktuellenGroupCode.code) {
                 case 2: // Nome do estilo de cota
                     dimStyleName = aktuellenGroupCode.value;
+                    nameFound = true;
+                    // Instanciar o estilo aqui se o nome é o primeiro campo importante encontrado
+                    if (style == null) {
+                        style = new DxfDimStyle(dimStyleName);
+                    } else {
+                        style.setName(dimStyleName);
+                    }
                     break;
-                // case 105: // Handle (geralmente ignoramos handles de tabela por enquanto)
-                //    break;
-                // case 140: // DIMTXT - altura do texto
-                //    // dimTxt = Integer.parseInt(aktuellenGroupCode.value);
-                //    break;
-                // Adicionar outros códigos de grupo para DIMSTYLE aqui se necessário no futuro
+                case 3: // Nome do estilo de cota (alternativo, menos comum que o 2 para DIMSTYLE)
+                    if (!nameFound) { // Só usar se o código 2 ainda não foi encontrado
+                        dimStyleName = aktuellenGroupCode.value;
+                        nameFound = true;
+                        if (style == null) {
+                            style = new DxfDimStyle(dimStyleName);
+                        } else {
+                            style.setName(dimStyleName);
+                        }
+                    }
+                    break;
+                case 41: // DIMASZ - Tamanho da seta
+                    arrowSize = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setArrowSize(arrowSize);
+                    break;
+                case 42: // DIMEXO - Offset da linha de extensão
+                    extensionLineOffset = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineOffset(extensionLineOffset);
+                    break;
+                case 43: // DIMEXE - Extensão da linha de extensão
+                    extensionLineExtension = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineExtension(extensionLineExtension);
+                    break;
+                case 44: // DIMTXT - Altura do texto (fallback)
+                    // Usar 140 se disponível, este é um fallback
+                    if (style != null && style.getTextHeight() == 2.5) { // Apenas se não definido por 140
+                         textHeight = Double.parseDouble(aktuellenGroupCode.value);
+                         style.setTextHeight(textHeight);
+                    } else if (style == null) { // Se o estilo não foi instanciado ainda
+                        textHeight = Double.parseDouble(aktuellenGroupCode.value);
+                    }
+                    break;
+                case 140: // DIMTXT - Altura do texto (preferencial)
+                    textHeight = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setTextHeight(textHeight);
+                    break;
+                case 147: // DIMGAP - Gap entre texto e linha de cota (preferencial)
+                    textGap = Double.parseDouble(aktuellenGroupCode.value);
+                    if (style != null) style.setTextGap(textGap);
+                    break;
+                case 278: // DIMGAP (usado no Demo plan.dxf, mas valor 46 é estranho)
+                          // A documentação sugere que 278 é DIMGAP, mas espera um double.
+                          // O Demo plan.dxf tem 46, que é um índice de cor.
+                          // Por segurança, vamos tentar parsear como double. Se falhar, ignorar.
+                    try {
+                        double demoGap = Double.parseDouble(aktuellenGroupCode.value);
+                        // Se o valor for 46.0, pode ser um erro no arquivo DXF.
+                        // Priorizar 147 se já lido, ou usar este se 147 não estiver presente.
+                        if (style != null && style.getTextGap() == 0.09) { // Apenas se não definido por 147
+                             textGap = demoGap; // Atualiza a variável local
+                             style.setTextGap(textGap);
+                        } else if (style == null) {
+                            textGap = demoGap;
+                        }
+                    } catch (NumberFormatException e) {
+                        // System.err.println("Aviso: DIMGAP (278) com valor não numérico: " + aktuellenGroupCode.value);
+                    }
+                    break;
+                // case 48: // DIMGAP (fallback menos comum)
+                //     if (style != null && style.getTextGap() == 0.09) { // Apenas se não definido por 147 ou 278
+                //          textGap = Double.parseDouble(aktuellenGroupCode.value);
+                //          style.setTextGap(textGap);
+                //     } else if (style == null) {
+                //         textGap = Double.parseDouble(aktuellenGroupCode.value);
+                //     }
+                //     break;
+                case 176: // DIMCLRD - Cor da linha de cota
+                    dimensionLineColor = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setDimensionLineColor(dimensionLineColor);
+                    break;
+                case 177: // DIMCLRE - Cor da linha de extensão
+                    extensionLineColor = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setExtensionLineColor(extensionLineColor);
+                    break;
+                case 178: // DIMCLRT - Cor do texto
+                    textColor = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setTextColor(textColor);
+                    break;
+                case 271: // DIMDEC - Casas decimais
+                    decimalPlaces = Integer.parseInt(aktuellenGroupCode.value);
+                    if (style != null) style.setDecimalPlaces(decimalPlaces);
+                    break;
+
+                // Ignorar outros códigos por enquanto
+                // case 70: // Flags (já lido em parseDimStyleTable ou não crítico para atributos visuais aqui)
+                // case 100: // Subclass marker AcDbDimStyleTableRecord
+                // case 105: // Handle
+                // case 330: // Soft-pointer ID/handle to owner dictionary
+                // ... etc ...
                 default:
-                    // Ignorar outros códigos por enquanto
                     break;
             }
         }
 
-        if (dimStyleName != null && !dimStyleName.isEmpty()) {
-            DxfDimStyle style = new DxfDimStyle(dimStyleName);
-            // Definir outros atributos aqui: style.setDimTxt(dimTxt);
+        if (style != null) { // Se o estilo foi instanciado (ou seja, o nome foi encontrado)
+            // Atribuir valores lidos caso o nome do estilo tenha vindo depois dos valores
+            style.setArrowSize(arrowSize);
+            style.setExtensionLineOffset(extensionLineOffset);
+            style.setExtensionLineExtension(extensionLineExtension);
+            style.setTextHeight(textHeight); // Garante que o último lido (140 ou 44) seja usado
+            style.setDecimalPlaces(decimalPlaces);
+            style.setTextGap(textGap); // Garante que o último lido (147 ou 278) seja usado
+            style.setDimensionLineColor(dimensionLineColor);
+            style.setExtensionLineColor(extensionLineColor);
+            style.setTextColor(textColor);
+
             document.addDimensionStyle(style);
-        } else {
-            // Não lançar exceção se o nome não for encontrado imediatamente, pois pode vir depois do handle 105.
-            // Uma verificação mais robusta seria necessária se quiséssemos garantir que todo DIMSTYLE tenha um nome.
-            // Por agora, se não houver nome, o estilo não será adicionado.
-            // Se aktuellenGroupCode for null aqui, significa EOF prematuro dentro de uma entrada DIMSTYLE.
-            if (aktuellenGroupCode == null) {
-                throw new DxfParserException("Premature EOF within a DIMSTYLE entry.");
-            }
+        } else if (nameFound) { // Nome foi encontrado, mas estilo não foi instanciado (não deveria acontecer com a lógica atual)
+             throw new DxfParserException("DIMSTYLE com nome '" + dimStyleName + "' encontrado, mas objeto de estilo não foi criado.");
         }
-        // aktuellenGroupCode já está posicionado no próximo código 0 (seja outro DIMSTYLE ou ENDTAB)
-        // ou é null se EOF.
+        // Se nameFound é false, significa que um DIMSTYLE foi encontrado sem um código 2 (nome).
+        // Isso é permitido pelo DXF (estilos anônimos), mas não vamos suportá-los por enquanto.
+        // Ou pode ser um EOF prematuro.
+        if (aktuellenGroupCode == null && nameFound == false) {
+            throw new DxfParserException("Premature EOF within a DIMSTYLE entry before a name was found.");
+        }
+        // aktuellenGroupCode já está posicionado no próximo código 0 ou é null.
     }
 }
