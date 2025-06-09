@@ -3,6 +3,7 @@ package com.cad.dxflib.structure;
 import com.cad.dxflib.common.DxfEntity;
 import com.cad.dxflib.math.Bounds;
 import com.cad.dxflib.structure.DxfLinetype; // Adicionar este import
+import com.cad.dxflib.structure.DxfDimStyle; // NOVA ADIÇÃO
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ public class DxfDocument {
     private Map<String, DxfLayer> layers;
     private Map<String, DxfBlock> blocks;
     private Map<String, DxfLinetype> linetypes; // NOVO CAMPO
+    private Map<String, DxfDimStyle> dimensionStyles; // NOVA ADIÇÃO
     // private Map<String, DxfTextStyle> textStyles; // Future
     // private DxfHeader headerVariables; // Future
 
@@ -25,6 +27,7 @@ public class DxfDocument {
         this.layers = new HashMap<>();
         this.blocks = new HashMap<>();
         this.linetypes = new HashMap<>(); // INICIALIZAR NOVO CAMPO
+        this.dimensionStyles = new HashMap<>(); // NOVA ADIÇÃO
         this.modelSpaceEntities = new ArrayList<>();
 
         // Add default layer "0"
@@ -112,6 +115,22 @@ public class DxfDocument {
 
     public Map<String, DxfLinetype> getLinetypes() {
         return linetypes;
+    }
+
+    // Dimension Styles
+    public void addDimensionStyle(DxfDimStyle style) {
+        if (style != null && style.getName() != null && !style.getName().isEmpty()) {
+            this.dimensionStyles.put(style.getName().toUpperCase(), style);
+        }
+    }
+
+    public DxfDimStyle getDimensionStyle(String name) {
+        if (name == null) return null;
+        return this.dimensionStyles.get(name.toUpperCase());
+    }
+
+    public Map<String, DxfDimStyle> getDimensionStyles() {
+        return this.dimensionStyles;
     }
 
     public Bounds getBounds() {
