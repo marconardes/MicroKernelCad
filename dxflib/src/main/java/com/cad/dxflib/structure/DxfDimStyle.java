@@ -1,75 +1,109 @@
 package com.cad.dxflib.structure;
 
-public class DxfDimStyle {
-    private String name; // Code 2
-    private String handle; // Code 105 or 5 (DIMSTYLE handle)
+import java.util.Objects;
 
-    // Standard flags (group 70)
-    private int flags70; // DIMTAD, DIMTIH, DIMTOH etc. are often packed here.
+/**
+ * Represents a DXF DIMSTYLE table entry.
+ * Dimension styles control the appearance of dimension entities.
+ */
+public class DxfDimStyle {
+    private String name; // Dimension style name (code 2)
+    private String handle; // Handle of the DIMSTYLE object (code 105)
+
+    // Standard flags (group 70), includes settings like DIMTAD, DIMTIH, DIMTOH through bit flags.
+    private int flags70;
 
     // Geometry - Lines and Arrows
-    private int dimensionLineColor = 0;       // DIMCLRD (176) - 0 = ByBlock, 256 = ByLayer
-    private int extensionLineColor = 0;       // DIMCLRE (177) - 0 = ByBlock, 256 = ByLayer
-    private double extensionLineExtension = 0.18; // DIMEXE (44 in DXF R12, but 43 seems to be used in example DxfParser?) -> Standard AutoCAD: 0.18
-    private double extensionLineOffset = 0.0625;  // DIMEXO (42) -> Standard AutoCAD: 0.0625
-    private String dimBlkName = "";           // DIMBLK (1 or 5 in older DXF, 342 in newer) - Arrow block name. Empty string for default closed filled.
-    // private String dimBlk1Name;          // DIMBLK1 (older DXF specific)
-    // private String dimBlk2Name;          // DIMBLK2 (older DXF specific)
-    private double arrowSize = 0.18;          // DIMASZ (41) -> Standard AutoCAD: 0.18
+    private int dimensionLineColor = 0;       // DIMCLRD (176) - Color of dimension line. 0 = ByBlock, 256 = ByLayer.
+    private int extensionLineColor = 0;       // DIMCLRE (177) - Color of extension lines.
+    private double extensionLineExtension = 0.18; // DIMEXE (44) - Extension line extension beyond dimension line.
+    private double extensionLineOffset = 0.0625;  // DIMEXO (42) - Offset of extension lines from definition points.
+    private String dimBlkName = "";           // DIMBLK (1, 5, or 342) - Arrow block name. Empty for default closed filled.
+    private double arrowSize = 0.18;          // DIMASZ (41) - Size of arrows and arrow blocks.
 
     // Text
-    private String textStyleName = "STANDARD"; // DIMTXSTY (340)
-    private int textColor = 0;                // DIMCLRT (178) - 0 = ByBlock, 256 = ByLayer
-    private double textHeight = 0.18;         // DIMTXT (140, fallback 44 or 40) -> Standard AutoCAD: 0.18
-    private double textGap = 0.09;            // DIMGAP (147, fallback 278 or 48) -> Standard AutoCAD: 0.09 (or 0.625 * text_height in some contexts, relative)
+    private String textStyleName = "STANDARD"; // DIMTXSTY (340) - Handle/name of the text style for dimension text.
+    private int textColor = 0;                // DIMCLRT (178) - Color of dimension text.
+    private double textHeight = 0.18;         // DIMTXT (140, fallback 44) - Height of dimension text.
+    private double textGap = 0.09;            // DIMGAP (147) - Gap between dimension line and dimension text.
 
     // Units
-    private int decimalPlaces = 2;            // DIMDEC (271 for linear) -> Standard AutoCAD: 2 for metric, 4 for imperial often
-    // private int angularDecimalPlaces = 0;   // DIMADEC (272 for angular)
+    private int decimalPlaces = 2;            // DIMDEC (271) - Number of decimal places for linear dimensions.
 
     // Fit and Placement
-    private int textVerticalAlignment = 0;    // DIMTAD (77) - 0=center, 1=above, 2=os, 3=jis
-    private boolean textInsideHorizontal = true; // DIMTIH (73) - 1=true, 0=false
-    private boolean textOutsideHorizontal = true;// DIMTOH (74) - 1=true, 0=false
-    private boolean textOutsideExtensions = false; // DIMTOFL (172) - Force text between ext lines if it doesn't fit
-    private boolean suppressFirstExtensionLine = false; // DIMSE1 (75) (DXF R12, or bit in 70)
-    private boolean suppressSecondExtensionLine = false; // DIMSE2 (76) (DXF R12, or bit in 70)
+    // Note: Many of these are also controlled by bits in flags70 in modern DXF.
+    // Explicit fields are provided for common ones.
+    private int textVerticalAlignment = 1;    // DIMTAD (77) - Vertical placement of text (0=center, 1=above, etc.). Default 1 (Above).
+    private boolean textInsideHorizontal = true; // DIMTIH (73) - Text inside extensions is horizontal (1=true).
+    private boolean textOutsideHorizontal = true;// DIMTOH (74) - Text outside extensions is horizontal (1=true).
+    private boolean textOutsideExtensions = false; // DIMTOFL (172) - Force text between extension lines if it doesn't fit.
+    private boolean suppressFirstExtensionLine = false; // DIMSE1 (75 or bit in 70) - Suppress first extension line.
+    private boolean suppressSecondExtensionLine = false; // DIMSE2 (76 or bit in 70) - Suppress second extension line.
 
-
-    // TODO: Add more fields as they become necessary from DXF files.
-    // Examples: DIMLWD (dim line lineweight), DIMLWE (ext line lineweight),
-    // DIMSCALE (overall scale), DIMLFAC (linear unit scale factor), etc.
-
+    /**
+     * Constructs a new DxfDimStyle with the given name.
+     * Initializes dimension style properties with common default values.
+     * @param name The name of the dimension style. Must not be null or empty.
+     * @throws IllegalArgumentException if the name is null or empty.
+     */
     public DxfDimStyle(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Dimension style name cannot be null or empty.");
+        }
         this.name = name;
-        // Default AutoCAD settings for a new style often depend on the template (imperial/metric)
-        // The values set above are common starting points.
-        // For example, textGap often defaults to 0.09 units, not relative to textHeight initially.
+        // Default values are set at field declaration, reflecting common AutoCAD-like defaults.
     }
 
+    /**
+     * Gets the name of the dimension style.
+     * @return The dimension style name.
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the name of the dimension style.
+     * @param name The new name.
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Gets the handle of this dimension style object.
+     * @return The handle string.
+     */
     public String getHandle() {
         return handle;
     }
 
+    /**
+     * Sets the handle of this dimension style object.
+     * @param handle The handle string.
+     */
     public void setHandle(String handle) {
         this.handle = handle;
     }
 
+    /**
+     * Gets the standard flags (group code 70) for this dimension style.
+     * These flags control various behaviors like text alignment and placement.
+     * @return The integer value of the flags.
+     */
     public int getFlags70() {
         return flags70;
     }
 
+    /**
+     * Sets the standard flags (group code 70) for this dimension style.
+     * @param flags70 The integer value of the flags.
+     */
     public void setFlags70(int flags70) {
         this.flags70 = flags70;
     }
+
+    // ... Getters and Setters for all other fields ...
 
     public int getDimensionLineColor() {
         return dimensionLineColor;
@@ -108,7 +142,7 @@ public class DxfDimStyle {
     }
 
     public void setDimBlkName(String dimBlkName) {
-        this.dimBlkName = dimBlkName;
+        this.dimBlkName = dimBlkName == null ? "" : dimBlkName;
     }
 
     public double getArrowSize() {
@@ -124,7 +158,7 @@ public class DxfDimStyle {
     }
 
     public void setTextStyleName(String textStyleName) {
-        this.textStyleName = textStyleName;
+        this.textStyleName = textStyleName == null ? "STANDARD" : textStyleName;
     }
 
     public int getTextColor() {
@@ -208,28 +242,30 @@ public class DxfDimStyle {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DxfDimStyle that = (DxfDimStyle) o;
+        // Dimension Style names are case-insensitive in DXF and should be the primary identifier.
+        // Assuming names are stored consistently (e.g., uppercase) by DxfDocument.
+        return Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        // Assuming names are stored consistently (e.g., uppercase).
+        return Objects.hash(name);
+    }
+
+    @Override
     public String toString() {
         return "DxfDimStyle{" +
                 "name='" + name + '\'' +
-                ", handle='" + handle + '\'' +
-                ", flags70=" + flags70 +
-                ", dimensionLineColor=" + dimensionLineColor +
-                ", extensionLineColor=" + extensionLineColor +
-                ", extensionLineExtension=" + extensionLineExtension +
-                ", extensionLineOffset=" + extensionLineOffset +
-                ", dimBlkName='" + dimBlkName + '\'' +
+                (handle != null ? ", handle='" + handle + '\'' : "") +
+                // ", flags70=" + flags70 + // Often too verbose
                 ", arrowSize=" + arrowSize +
-                ", textStyleName='" + textStyleName + '\'' +
-                ", textColor=" + textColor +
                 ", textHeight=" + textHeight +
-                ", textGap=" + textGap +
-                ", decimalPlaces=" + decimalPlaces +
-                ", textVerticalAlignment=" + textVerticalAlignment +
-                ", textInsideHorizontal=" + textInsideHorizontal +
-                ", textOutsideHorizontal=" + textOutsideHorizontal +
-                ", textOutsideExtensions=" + textOutsideExtensions +
-                ", suppressFirstExtensionLine=" + suppressFirstExtensionLine +
-                ", suppressSecondExtensionLine=" + suppressSecondExtensionLine +
+                ", textStyleName='" + textStyleName + '\'' +
                 '}';
     }
 }
