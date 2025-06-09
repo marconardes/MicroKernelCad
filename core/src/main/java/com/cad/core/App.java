@@ -7,6 +7,10 @@ import com.cad.core.kernel.Kernel;
  *
  */
 public class App {
+    private App() {
+        // Utility class
+    }
+
     /**
      * Main method to start the application.
      *
