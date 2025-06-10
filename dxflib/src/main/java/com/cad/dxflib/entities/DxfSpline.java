@@ -30,15 +30,6 @@ public class DxfSpline extends AbstractDxfEntity {
     private double controlPointTolerance = 0.0000001; // Control point tolerance (code 43)
     private double fitTolerance = 0.0000000001; // Fit tolerance (code 44)
 
-    /**
-     * Constructs a new DxfSpline.
-     * Initializes lists for knots, control points, and fit points.
-     * Sets default normal vector to (0,0,1) and default tolerances.
-     */
-    public DxfSpline() {
-        super(); // Calls AbstractDxfEntity's no-arg constructor
-    }
-
     @Override
     public EntityType getType() {
         return EntityType.SPLINE;

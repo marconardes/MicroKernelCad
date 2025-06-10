@@ -11,10 +11,10 @@ public class Bounds {
     private double maxZ = Double.NEGATIVE_INFINITY; // Though less used for 2D SVG viewBox
     private boolean initialized = false;
 
-    public Bounds() {}
-
     public void addToBounds(Point3D point) {
-        if (point == null) return;
+        if (point == null) {
+            return;
+        }
         updateBounds(point.x, point.y, point.z);
     }
 
@@ -34,12 +34,24 @@ public class Bounds {
     }
 
     private void updateBounds(double x, double y, double z) {
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (z < minZ) minZ = z;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-        if (z > maxZ) maxZ = z;
+        if (x < minX) {
+            minX = x;
+        }
+        if (y < minY) {
+            minY = y;
+        }
+        if (z < minZ) {
+            minZ = z;
+        }
+        if (x > maxX) {
+            maxX = x;
+        }
+        if (y > maxY) {
+            maxY = y;
+        }
+        if (z > maxZ) {
+            maxZ = z;
+        }
         initialized = true;
     }
 
@@ -72,7 +84,9 @@ public class Bounds {
 
     @Override
     public String toString() {
-        if (!isValid()) return "Bounds{invalid}";
+        if (!isValid()) {
+            return "Bounds{invalid}";
+        }
         return "Bounds{" +
                "minX=" + minX + ", minY=" + minY + ", minZ=" + minZ +
                ", maxX=" + maxX + ", maxY=" + maxY + ", maxZ=" + maxZ +

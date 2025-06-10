@@ -39,23 +39,23 @@ public class DxfToSvgConverter {
 
         if (documentBounds.isValid()) {
             // Option 2: Standard viewBox and use transform on a group (more conventional for SVG)
-            double viewBox_minX = documentBounds.getMinX() - margin;
-            double viewBox_minY = documentBounds.getMinY() - margin; // Standard minY
-            double viewBox_width = documentBounds.getWidth() + (2 * margin);
-            double viewBox_height = documentBounds.getHeight() + (2 * margin);
+            double viewBoxMinX = documentBounds.getMinX() - margin;
+            double viewBoxMinY = documentBounds.getMinY() - margin; // Standard minY
+            double viewBoxWidth = documentBounds.getWidth() + (2 * margin);
+            double viewBoxHeight = documentBounds.getHeight() + (2 * margin);
 
             // Ensure width and height are not zero if bounds are just a point or a line
-            if (viewBox_width == 0) viewBox_width = 1;
-            if (viewBox_height == 0) viewBox_height = 1;
+            if (viewBoxWidth == 0) viewBoxWidth = 1;
+            if (viewBoxHeight == 0) viewBoxHeight = 1;
 
-            svgWidth = viewBox_width;
-            svgHeight = viewBox_height;
+            svgWidth = viewBoxWidth;
+            svgHeight = viewBoxHeight;
 
             viewBox = String.format(Locale.US, "%.3f %.3f %.3f %.3f",
-                                    viewBox_minX,
-                                    viewBox_minY, // Using standard minY from bounds
-                                    viewBox_width,
-                                    viewBox_height);
+                                    viewBoxMinX,
+                                    viewBoxMinY, // Using standard minY from bounds
+                                    viewBoxWidth,
+                                    viewBoxHeight);
         } else {
             // Default for empty or invalid bounds document
             svgWidth = 100 + (2 * margin); // Default width
@@ -81,7 +81,9 @@ public class DxfToSvgConverter {
 
                 if (layer.getEntities() != null) {
                     for (DxfEntity entity : layer.getEntities()) {
-                        if (entity == null) continue;
+                        if (entity == null) {
+                            continue;
+                        }
                         appendEntityToSvg(entity, dxfDocument, options, svgBuilder, 0);
                     }
                 }
@@ -95,7 +97,9 @@ public class DxfToSvgConverter {
                 }
                 if (layer.getEntities() != null) {
                     for (DxfEntity entity : layer.getEntities()) {
-                        if (entity == null) continue;
+                        if (entity == null) {
+                            continue;
+                        }
                         appendEntityToSvg(entity, dxfDocument, options, svgBuilder, 0);
                     }
                 }
@@ -364,10 +368,10 @@ public class DxfToSvgConverter {
                     pathData.append(" Z"); // Simple close if no bulge on closing segment
                 } else {
                     // Arc for the closing segment
-                    Point2D p_last = vertices.get(vertices.size() - 1);
-                    Point2D p_first = vertices.get(0);
-                    double dx = p_first.x - p_last.x;
-                    double dy = p_first.y - p_last.y;
+                    Point2D pLast = vertices.get(vertices.size() - 1);
+                    Point2D pFirst = vertices.get(0);
+                    double dx = pFirst.x - pLast.x;
+                    double dy = pFirst.y - pLast.y;
                     double chordLength = Math.sqrt(dx*dx + dy*dy);
 
                     if (chordLength < 1e-9) {
@@ -390,7 +394,7 @@ public class DxfToSvgConverter {
                                     " A %.3f,%.3f 0 %d,%d %.3f,%.3f",
                                     radius, radius,
                                     largeArcFlag, sweepFlag,
-                                    p_first.x, p_first.y));
+                                    pFirst.x, pFirst.y));
                             // No explicit Z needed here as the arc command itself moves to the start point.
                             // However, some SVG renderers might behave better with an explicit Z if the path isn't auto-closed by fill.
                             // Since fill="none", an explicit Z might be better if the arc doesn't perfectly land.
@@ -403,7 +407,6 @@ public class DxfToSvgConverter {
             }
         }
 
-        String fill = "none"; // Already handled by getCommonSvgStyleAttributes if logic is there
         // String color will come from styleAttributes
         // double strokeWidth will come from styleAttributes (or be overridden if constantWidth > 0)
 

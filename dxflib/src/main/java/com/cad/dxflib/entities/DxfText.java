@@ -115,7 +115,7 @@ public class DxfText extends AbstractDxfEntity {
      * @param styleName The new text style name.
      */
     public void setStyleName(String styleName) {
-        this.styleName = (styleName != null && !styleName.trim().isEmpty()) ? styleName : "STANDARD";
+        this.styleName = styleName != null && !styleName.trim().isEmpty() ? styleName : "STANDARD";
     }
 
     @Override

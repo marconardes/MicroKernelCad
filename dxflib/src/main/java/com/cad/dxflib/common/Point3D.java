@@ -21,8 +21,12 @@ public class Point3D {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    if (this == obj) {
+        return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+        return false;
+    }
         Point3D point3D = (Point3D) o;
         return Double.compare(point3D.x, x) == 0 &&
                Double.compare(point3D.y, y) == 0 &&
