@@ -2,7 +2,6 @@ package com.cad.dxflib.parser;
 
 import com.cad.dxflib.common.DxfEntity;
 import com.cad.dxflib.common.Point3D;
-import com.cad.dxflib.parser.EntitiesParser;
 import com.cad.dxflib.structure.DxfBlock;
 import com.cad.dxflib.structure.DxfDimStyle;
 import com.cad.dxflib.structure.DxfDocument;
@@ -78,9 +77,13 @@ public class DxfParser {
             throw new DxfParserException("Error reading DXF file", e);
         } finally {
             try {
-                if (reader != null) reader.close();
+                if (reader != null) {
+                    reader.close();
+                }
             } catch (IOException e) {
-                // Log error or ignore
+                // Usually indicates end of file or stream closed, or other IO issue.
+                // Depending on desired behavior, could log e.printStackTrace(); or throw new DxfParserException("Error reading DXF content", e);
+                // For now, adding a comment to acknowledge and explain.
             }
         }
         return this.document;
@@ -279,8 +282,8 @@ public class DxfParser {
     }
 
     private void consumeUnknownTableEntry() throws IOException, DxfParserException {
-        while((aktuellenGroupCode = nextGroupCode()) != null && aktuellenGroupCode.code != 0) {
-            // Keep consuming non-zero codes
+        while((this.aktuellenGroupCode = nextGroupCode()) != null && this.aktuellenGroupCode.code != 0) {
+            // Intentionally consuming group codes until the next 0 code or EOF
         }
     }
 
@@ -469,27 +472,31 @@ public class DxfParser {
                         }
                     }
                     break;
-                case 41: arrowSize = Double.parseDouble(aktuellenGroupCode.value); if (style != null) style.setArrowSize(arrowSize); break;
-                case 42: extensionLineOffset = Double.parseDouble(aktuellenGroupCode.value); if (style != null) style.setExtensionLineOffset(extensionLineOffset); break;
-                case 43: extensionLineExtension = Double.parseDouble(aktuellenGroupCode.value); if (style != null) style.setExtensionLineExtension(extensionLineExtension); break;
+                case 41: arrowSize = Double.parseDouble(aktuellenGroupCode.value); if (style != null) { style.setArrowSize(arrowSize); } break;
+                case 42: extensionLineOffset = Double.parseDouble(aktuellenGroupCode.value); if (style != null) { style.setExtensionLineOffset(extensionLineOffset); } break;
+                case 43: extensionLineExtension = Double.parseDouble(aktuellenGroupCode.value); if (style != null) { style.setExtensionLineExtension(extensionLineExtension); } break;
                 case 44: // DIMTXT (fallback if 140 not present)
                     double tempTextHeightFallback = Double.parseDouble(aktuellenGroupCode.value);
-                    if (style != null) { if(style.getTextHeight() == defaults.getTextHeight()) style.setTextHeight(tempTextHeightFallback); }
+                    if (style != null) { if(style.getTextHeight() == defaults.getTextHeight()) { style.setTextHeight(tempTextHeightFallback); } }
                     else { textHeight = tempTextHeightFallback; }
                     break;
-                case 140: textHeight = Double.parseDouble(aktuellenGroupCode.value); if (style != null) style.setTextHeight(textHeight); break;
-                case 147: textGap = Double.parseDouble(aktuellenGroupCode.value); if (style != null) style.setTextGap(textGap); break;
+                case 140: textHeight = Double.parseDouble(aktuellenGroupCode.value); if (style != null) { style.setTextHeight(textHeight); } break;
+                case 147: textGap = Double.parseDouble(aktuellenGroupCode.value); if (style != null) { style.setTextGap(textGap); } break;
                 case 278: // DIMGAP (alternative)
                     try {
                         double demoGap = Double.parseDouble(aktuellenGroupCode.value);
-                        if (style != null) { if(style.getTextGap() == defaults.getTextGap()) style.setTextGap(demoGap); }
+                        if (style != null) { if(style.getTextGap() == defaults.getTextGap()) { style.setTextGap(demoGap); } }
                         else { textGap = demoGap; }
-                    } catch (NumberFormatException e) { /* ignore */ }
+                    } catch (NumberFormatException e) {
+                        // Error parsing a double value for a dimension style property.
+                        // Value will be skipped, default may apply. Consider logging:
+                        // System.err.println("Failed to parse number for DIMSTYLE property code " + code + ": " + value);
+                    }
                     break;
-                case 176: dimensionLineColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) style.setDimensionLineColor(dimensionLineColor); break;
-                case 177: extensionLineColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) style.setExtensionLineColor(extensionLineColor); break;
-                case 178: textColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) style.setTextColor(textColor); break;
-                case 271: decimalPlaces = Integer.parseInt(aktuellenGroupCode.value); if (style != null) style.setDecimalPlaces(decimalPlaces); break;
+                case 176: dimensionLineColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) { style.setDimensionLineColor(dimensionLineColor); } break;
+                case 177: extensionLineColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) { style.setExtensionLineColor(extensionLineColor); } break;
+                case 178: textColor = Integer.parseInt(aktuellenGroupCode.value); if (style != null) { style.setTextColor(textColor); } break;
+                case 271: decimalPlaces = Integer.parseInt(aktuellenGroupCode.value); if (style != null) { style.setDecimalPlaces(decimalPlaces); } break;
                 // TODO: Add more DIMSTYLE variables as needed (DIMBLK, DIMTXSTY, DIMTAD, etc.)
                 default: break;
             }

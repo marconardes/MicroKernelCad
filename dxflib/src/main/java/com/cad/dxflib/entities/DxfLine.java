@@ -68,8 +68,12 @@ public class DxfLine extends AbstractDxfEntity {
     @Override
     public Bounds getBounds() {
         Bounds bounds = new Bounds();
-        if (startPoint != null) bounds.addToBounds(this.startPoint);
-        if (endPoint != null) bounds.addToBounds(this.endPoint);
+        if (startPoint != null) {
+            bounds.addToBounds(this.startPoint);
+        }
+        if (endPoint != null) {
+            bounds.addToBounds(this.endPoint);
+        }
         return bounds.isValid() ? bounds : null;
     }
 

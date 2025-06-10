@@ -31,15 +31,6 @@ public class DxfDimension extends AbstractDxfEntity {
 
     private Point3D extrusionDirection = new Point3D(0,0,1); // Codes 210,220,230 (default Z-axis)
 
-    /**
-     * Constructs a new DxfDimension.
-     * Initializes all point fields to (0,0,0), text to empty, style to "STANDARD",
-     * and extrusion to (0,0,1).
-     */
-    public DxfDimension() {
-        super();
-    }
-
     @Override
     public EntityType getType() {
         return EntityType.DIMENSION;
@@ -251,13 +242,21 @@ public class DxfDimension extends AbstractDxfEntity {
     @Override
     public Bounds getBounds() {
         Bounds bounds = new Bounds();
-        if (this.definitionPoint != null) bounds.addToBounds(this.definitionPoint);
-        if (this.middleOfTextPoint != null) bounds.addToBounds(this.middleOfTextPoint);
+        if (this.definitionPoint != null) {
+            bounds.addToBounds(this.definitionPoint);
+        }
+        if (this.middleOfTextPoint != null) {
+            bounds.addToBounds(this.middleOfTextPoint);
+        }
 
         int type = getDimensionType();
         if (type == 0 || type == 1) { // Rotated, Horizontal, Vertical, Aligned
-            if (this.linearPoint1 != null) bounds.addToBounds(this.linearPoint1);
-            if (this.linearPoint2 != null) bounds.addToBounds(this.linearPoint2);
+            if (this.linearPoint1 != null) {
+                bounds.addToBounds(this.linearPoint1);
+            }
+            if (this.linearPoint2 != null) {
+                bounds.addToBounds(this.linearPoint2);
+            }
         }
         // Add more specific points for other types if available and simple enough
         // e.g., for radial/diameter, definitionPoint (10,20,30) is center, point 15,25,35 is on circumference.

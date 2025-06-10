@@ -50,7 +50,7 @@ public abstract class AbstractDxfEntity implements DxfEntity {
      */
     @Override
     public void setLayerName (String layerName) {
-        this.layerName = (layerName != null && !layerName.trim ().isEmpty ()) ? layerName : "0";
+        this.layerName = layerName != null && !layerName.trim ().isEmpty () ? layerName : "0";
     }
 
     /**
@@ -93,8 +93,8 @@ public abstract class AbstractDxfEntity implements DxfEntity {
      */
     @Override
     public void setLinetypeName (String linetypeName) {
-        this.linetypeName = (linetypeName != null
-                && !linetypeName.trim ().isEmpty ()) ? linetypeName : "BYLAYER";
+        this.linetypeName = linetypeName != null
+                && !linetypeName.trim ().isEmpty () ? linetypeName : "BYLAYER";
     }
 
     /**

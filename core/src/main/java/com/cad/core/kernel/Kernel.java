@@ -8,7 +8,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList; // Added import
 import java.util.List; // Added import
 
-import javax.swing.SwingUtilities; // New import
 // import com.cad.gui.MainFrame; // New import - MainFrame usage is commented out
 
 
@@ -107,7 +106,7 @@ public class Kernel {
             File[] modules = modulesDir.listFiles();
             for (File module : modules) {
                 if (module.isDirectory()) {
-                    if (module.getName().equals("export")) {
+                    if ("export".equals(module.getName())) {
                         // List the directories in export
                         File[] exportModules = module.listFiles();
                         for (File exportModule : exportModules) {
@@ -157,7 +156,6 @@ public class Kernel {
 
 
     private void verifyJarsAndCopy(File[] jars, File localModules) {
-        boolean hasDifferentDate = false;
         System.err.println("=====> ");
 
         if (jars != null) {
@@ -171,7 +169,6 @@ public class Kernel {
                         if (Files.getLastModifiedTime(sourcePath).compareTo(Files.getLastModifiedTime(targetPath)) != 0) {
                             System.out.println("JAR file " + jar.getName() + " has a different modification date.");
                             Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                            hasDifferentDate = true;
                             System.out.println("++++++");
 
                         } else {

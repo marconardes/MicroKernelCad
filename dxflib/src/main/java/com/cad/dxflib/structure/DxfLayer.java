@@ -73,7 +73,7 @@ public class DxfLayer {
      * @param linetypeName The linetype name.
      */
     public void setLinetypeName(String linetypeName) {
-        this.linetypeName = (linetypeName != null && !linetypeName.trim().isEmpty()) ? linetypeName : "CONTINUOUS";
+        this.linetypeName = linetypeName != null && !linetypeName.trim().isEmpty() ? linetypeName : "CONTINUOUS";
     }
 
     /**
@@ -114,8 +114,12 @@ public class DxfLayer {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfLayer dxfLayer = (DxfLayer) o;
         // Layer names are case-insensitive in DXF, comparison should reflect this.
         // Assuming names are stored consistently (e.g., uppercase) by DxfDocument.
