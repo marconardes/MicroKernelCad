@@ -111,8 +111,12 @@ public class DxfBlockRecord {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfBlockRecord that = (DxfBlockRecord) o;
         // Block record names are case-insensitive in DXF and should be the primary identifier.
         // Assuming names are stored consistently (e.g., uppercase) by DxfDocument.

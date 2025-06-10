@@ -143,8 +143,12 @@ public class DxfScale {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfScale dxfScale = (DxfScale) o;
         // Scales are typically unique by their handle within a DXF document.
         return Objects.equals(handle, dxfScale.handle);

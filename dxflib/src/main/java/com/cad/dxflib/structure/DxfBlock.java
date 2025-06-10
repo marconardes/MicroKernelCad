@@ -77,8 +77,12 @@ public class DxfBlock {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfBlock dxfBlock = (DxfBlock) o;
         return Objects.equals(name, dxfBlock.name); // Blocks are typically unique by name
     }

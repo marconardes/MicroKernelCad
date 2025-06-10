@@ -132,8 +132,12 @@ public class DxfDictionary {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfDictionary that = (DxfDictionary) o;
         // Dictionaries are often unique by their handle.
         return Objects.equals(handle, that.handle);

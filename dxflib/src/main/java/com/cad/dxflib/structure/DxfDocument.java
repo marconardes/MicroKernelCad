@@ -90,7 +90,9 @@ public class DxfDocument {
      * @return The DxfLayer object, or null if not found.
      */
     public DxfLayer getLayer(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return layers.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -119,7 +121,9 @@ public class DxfDocument {
      * @return The DxfBlock object, or null if not found.
      */
     public DxfBlock getBlock(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return blocks.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -179,7 +183,9 @@ public class DxfDocument {
      * @return The DxfLinetype object, or null if not found.
      */
     public DxfLinetype getLinetype(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return linetypes.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -208,7 +214,9 @@ public class DxfDocument {
      * @return The DxfDimStyle object, or null if not found.
      */
     public DxfDimStyle getDimensionStyle(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return this.dimensionStyles.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -237,7 +245,9 @@ public class DxfDocument {
      * @return The DxfTextStyle object, or null if not found.
      */
     public DxfTextStyle getTextStyle(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return this.textStyles.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -266,7 +276,9 @@ public class DxfDocument {
      * @return The DxfBlockRecord object, or null if not found.
      */
     public DxfBlockRecord getBlockRecord(String name) {
-        if (name == null) return null;
+        if (name == null) {
+            return null;
+        }
         return this.blockRecords.get(name.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -295,7 +307,9 @@ public class DxfDocument {
      * @return The DxfDictionary object, or null if not found.
      */
     public DxfDictionary getDictionary(String nameOrHandle) {
-        if (nameOrHandle == null) return null;
+        if (nameOrHandle == null) {
+            return null;
+        }
         return this.dictionaries.get(nameOrHandle.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -326,7 +340,9 @@ public class DxfDocument {
      * @return The Object, or null if not found.
      */
     public Object getObject(String handle) {
-        if (handle == null) return null;
+        if (handle == null) {
+            return null;
+        }
         return this.genericObjects.get(handle.toUpperCase(java.util.Locale.ROOT));
     }
 
@@ -357,7 +373,9 @@ public class DxfDocument {
      * @return The DxfScale object, or null if not found.
      */
     public DxfScale getScale(String handleOrName) {
-        if (handleOrName == null) return null;
+        if (handleOrName == null) {
+            return null;
+        }
         return this.scales.get(handleOrName.toUpperCase(java.util.Locale.ROOT));
     }
 
