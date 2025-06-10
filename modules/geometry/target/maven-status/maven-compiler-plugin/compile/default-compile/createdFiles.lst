@@ -1,6 +1,0 @@
-com/cad/modules/geometry/entities/Circle2D.class
-com/cad/modules/geometry/entities/Arc2D.class
-com/cad/modules/geometry/entities/GeometricEntity2D.class
-com/cad/modules/geometry/GeometryEvent.class
-com/cad/modules/geometry/entities/Polyline2D.class
-com/cad/modules/geometry/entities/Line2D.class

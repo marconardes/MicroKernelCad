@@ -1,9 +1,0 @@
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/kernel/Kernel.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/services/LoggerService.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/modules/geometry/entities/Circle2D.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/services/Utils.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/services/ConfigService.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/api/ModuleInterface.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/App.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/kernel/ModuleManager.java
-/home/marconardes/IAS Project/MicroKernelCad/core/src/main/java/com/cad/core/api/EventBus.java

@@ -19,10 +19,10 @@ public class Point2D {
 
     @Override
     public boolean equals(Object o) {
-    if (this == obj) {
+    if (this == o) {
         return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (o == null || getClass() != o.getClass()) {
         return false;
     }
         Point2D point2D = (Point2D) o;

@@ -119,7 +119,7 @@
       <property name="tokens"
                value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, STATIC_INIT,
                     INSTANCE_INIT, ANNOTATION_DEF, ENUM_DEF, INTERFACE_DEF, RECORD_DEF,
-                    COMPACT_CTOR_DEF, LITERAL_SWITCH, LITERAL_CASE, LITERAL_FINALLY,
+                    COMPACT_CTOR_DEF, LITERAL_SWITCH, LITERAL_FINALLY,
                     LITERAL_CATCH"/>
     </module>
     <module name="SuppressionXpathSingleFilter">
@@ -137,7 +137,7 @@
                value="COMMA, SEMI, TYPECAST, LITERAL_IF, LITERAL_ELSE, LITERAL_RETURN,
                     LITERAL_WHILE, LITERAL_DO, LITERAL_FOR, LITERAL_FINALLY, DO_WHILE, ELLIPSIS,
                     LITERAL_SWITCH, LITERAL_SYNCHRONIZED, LITERAL_TRY, LITERAL_CATCH, LAMBDA,
-                    LITERAL_YIELD, LITERAL_CASE, LITERAL_WHEN"/>
+                    LITERAL_YIELD, LITERAL_CASE"/>
     </module>
     <module name="WhitespaceAround">
       <property name="allowEmptyConstructors" value="true"/>
@@ -145,7 +145,6 @@
       <property name="allowEmptyMethods" value="true"/>
       <property name="allowEmptyTypes" value="true"/>
       <property name="allowEmptyLoops" value="true"/>
-      <property name="allowEmptySwitchBlockStatements" value="true"/>
       <property name="ignoreEnhancedForColon" value="false"/>
       <property name="tokens"
                value="ASSIGN, BAND, BAND_ASSIGN, BOR, BOR_ASSIGN, BSR, BSR_ASSIGN, BXOR,
@@ -155,7 +154,7 @@
                     LITERAL_TRY, LITERAL_WHILE, LOR, LT, MINUS, MINUS_ASSIGN, MOD, MOD_ASSIGN,
                     NOT_EQUAL, PLUS, PLUS_ASSIGN, QUESTION, RCURLY, SL, SLIST, SL_ASSIGN, SR,
                     SR_ASSIGN, STAR, STAR_ASSIGN, LITERAL_ASSERT,
-                    TYPE_EXTENSION_AND, LITERAL_WHEN"/>
+                    TYPE_EXTENSION_AND"/>
       <message key="ws.notFollowed"
               value="WhitespaceAround: ''{0}'' is not followed by whitespace. Empty blocks
                may only be represented as '{}' when not part of a multi-block statement (4.1.3)"/>
@@ -316,7 +315,6 @@
         </module>
         <module name="NoWhitespaceBeforeCaseDefaultColon"/>
         <module name="OverloadMethodsDeclarationOrder"/>
-        <module name="ConstructorsDeclarationGrouping"/>
         <module name="VariableDeclarationUsageDistance"/>
         <module name="CustomImportOrder">
             <property name="sortImportsInGroupAlphabetically" value="true"/>
@@ -326,8 +324,8 @@
         </module>
         <module name="MethodParamPad">
             <property name="tokens"
-                      value="CTOR_DEF, LITERAL_NEW, METHOD_CALL, METHOD_DEF, CTOR_CALL,
-                    SUPER_CTOR_CALL, ENUM_CONSTANT_DEF, RECORD_DEF, RECORD_PATTERN_DEF"/>
+                      value="CTOR_DEF, LITERAL_NEW, METHOD_CALL, METHOD_DEF,
+                    SUPER_CTOR_CALL, ENUM_CONSTANT_DEF, RECORD_DEF"/>
         </module>
         <module name="NoWhitespaceBefore">
             <property name="tokens"
@@ -341,7 +339,7 @@
                     EXPR, LITERAL_CATCH, LITERAL_DO, LITERAL_FOR, LITERAL_IF, LITERAL_NEW,
                     LITERAL_SWITCH, LITERAL_SYNCHRONIZED, LITERAL_WHILE, METHOD_CALL,
                     METHOD_DEF, QUESTION, RESOURCE_SPECIFICATION, SUPER_CTOR_CALL, LAMBDA,
-                    RECORD_DEF, RECORD_PATTERN_DEF"/>
+                    RECORD_DEF"/>
         </module>
         <module name="OperatorWrap">
             <property name="option" value="NL"/>
