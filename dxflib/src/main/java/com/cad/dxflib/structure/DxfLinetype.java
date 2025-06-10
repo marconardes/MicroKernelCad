@@ -96,7 +96,7 @@ public class DxfLinetype {
     public boolean isContinuous() {
         return patternElements.isEmpty() ||
                (patternElements.size() == 1 && patternElements.get(0) >= 0 && patternLength > 0) ||
-               name.equalsIgnoreCase("CONTINUOUS");
+               "CONTINUOUS".equalsIgnoreCase(name);
     }
 
     /**
@@ -145,8 +145,12 @@ public class DxfLinetype {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         DxfLinetype that = (DxfLinetype) o;
         // Linetype names are case-insensitive in DXF and should be the primary identifier.
         // Assuming names are stored consistently (e.g., uppercase) by DxfDocument.
